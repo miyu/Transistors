@@ -116,6 +116,7 @@ class PurchaseOperator extends Operator {
     apply(state) {
         state = { ...state };
         for (let [k, v] of Object.entries(this.costs(state))) {
+            if (k.includes("Built")) continue;
             state[k] -= v;
         }
         for (let [k, v] of Object.entries(this.yields(state))) {
@@ -302,16 +303,25 @@ allOperators.push(perceptrons);
 allOperators.push(aiWinter);
 allOperators.push(aiWinterEnd);
 
+var eventFirstTransistor = new EventOperator("First Transistor", { transistorsBuilt: 1 }, 'E_FIRST_TRANSISTOR', [], () => showNotification('E_FIRST_TRANSISTOR'), { });
+var eventFirstComputer = new EventOperator("First Computer", { computersBuilt: 1 }, 'E_FIRST_COMPUTER', [], () => showNotification('E_FIRST_COMPUTER'), { });
+var eventFirstIntegratedCircuit = new EventOperator("First Integrated Circuit", { integratedCircuitsBuilt: 1 }, 'E_FIRST_INTEGRATED_CIRCUIT', [], () => showNotification('E_FIRST_INTEGRATED_CIRCUIT'), { });
+allOperators.push(eventFirstTransistor);
+allOperators.push(eventFirstComputer);
+allOperators.push(eventFirstIntegratedCircuit);
+
 //-----------------------------------------------------------------------------
 // User Interface
 //-----------------------------------------------------------------------------
 g_statusUi = $("<h1></h1>");
+g_debugStatusUi = $("<h1 style='font-size: 20px'></h1>");
 g_computeUnitSliderHost = $("#computeUnitSliderHost");
 g_transistorsVsComputersSlider = $("#computeUnitSlider");
 
 function setupInterface() {
     $('.notification-template').hide();
     $('#status-host').append(g_statusUi);
+    $('#debug-status-host').append(g_debugStatusUi);
     g_computeUnitSliderHost.hide();
 
     for (let operator of allOperators) {
@@ -326,7 +336,18 @@ function setupInterface() {
 
 function updateInterface() {
     var json = "{ " + Object.entries(g_currentState).map(([k, v]) => k + ": " + (typeof v === 'number' ? v.toFixed(1) : '[object]')).join(", ") + " }";
-    g_statusUi.text(json);
+    g_debugStatusUi.text(json);
+
+    var text = [
+        [~~(g_currentState.transistors + g_currentState.integratedCircuits) + " Units", true],
+        [~~g_currentState.computers + " Computers", g_currentState.computersBuilt > 0],
+        [~~g_currentState.factories + " Factories", g_currentState.factoriesBuilt > 0],
+        [~~g_currentState.labs + " Labs", g_currentState.labsBuilt > 0],
+        [~~g_currentState.research + " Research", g_currentState.labsBuilt > 0],
+        [~~g_currentState.popularity + " Popularity", true],
+        [~~g_currentState.unemployment + " Unemployment", true],
+    ].filter(([t, ok]) => ok).map(([t, ok]) => t).join("<br/>")
+    g_statusUi.html(text)
 
     for (let operator of allOperators) {
         if (operator.prereqs(g_currentState)) {
