@@ -3,27 +3,32 @@
 <head>
   <title>Transistors!</title>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-  <script src="main.js"></script>
 </head>
 <body>
-<div>
-  <div id="status-host"></div>
-  <div id="x" style="display: flex; flex-direction: row">
-    <div id="control-host" style="flex: 1"></div>
-    <div id="sidebar" style="flex: 1; background: red"></div>
+  <div>
+    <div id="status-host"></div>
+    <div id="x" style="display: flex; flex-direction: row">
+      <div id="control-host" style="flex: 1"></div>
+      <div id="sidebar" style="flex: 1; background: red"></div>
+    </div>
   </div>
-</div>
-<div class="notification-template" id="E_PERCEPTRON_NOTIFICATION">
-  <h1>Perceptrons</h1>
-  <p>Lorem ipsum dolor sit amet, ne unum dissentias mei. Facer nullam euismod ex pri, dicit deserunt argumentum eos id. Quis epicuri nam in, usu no scripta assueverit. Vel reque nullam in, esse habeo semper vim in, in vitae admodum vim. His decore accusata quaestio ei, no electram laboramus mei. Eos id vitae dolore alienum, ea illud cetero diceret quo, ne doctus meliore delicatissimi sed. Mel nobis soluta laboramus ad, et vel assum facilisis, usu dicam salutatus temporibus cu.</p>
-</div>
-<div class="notification-template" id="E_AI_WINTER">
-  <h1>AI Winter</h1>
-  <p>Lorem ipsum dolor sit amet, ne unum dissentias mei. Facer nullam euismod ex pri, dicit deserunt argumentum eos id. Quis epicuri nam in, usu no scripta assueverit. Vel reque nullam in, esse habeo semper vim in, in vitae admodum vim. His decore accusata quaestio ei, no electram laboramus mei. Eos id vitae dolore alienum, ea illud cetero diceret quo, ne doctus meliore delicatissimi sed. Mel nobis soluta laboramus ad, et vel assum facilisis, usu dicam salutatus temporibus cu.</p>
-</div>
-<div class="notification-template" id="E_AI_WINTER_END">
-  <h1>AI Winter Ended</h1>
-  <p>Lorem ipsum dolor sit amet, ne unum dissentias mei. Facer nullam euismod ex pri, dicit deserunt argumentum eos id. Quis epicuri nam in, usu no scripta assueverit. Vel reque nullam in, esse habeo semper vim in, in vitae admodum vim. His decore accusata quaestio ei, no electram laboramus mei. Eos id vitae dolore alienum, ea illud cetero diceret quo, ne doctus meliore delicatissimi sed. Mel nobis soluta laboramus ad, et vel assum facilisis, usu dicam salutatus temporibus cu.</p>
-</div>
+  <div class="notification-template" id="E_PERCEPTRON_NOTIFICATION">
+    <h1>Perceptrons</h1>
+    <p>Lorem ipsum dolor sit amet, ne unum dissentias mei. Facer nullam euismod ex pri, dicit deserunt argumentum eos id. Quis epicuri nam in, usu no scripta assueverit. Vel reque nullam in, esse habeo semper vim in, in vitae admodum vim. His decore accusata quaestio ei, no electram laboramus mei. Eos id vitae dolore alienum, ea illud cetero diceret quo, ne doctus meliore delicatissimi sed. Mel nobis soluta laboramus ad, et vel assum facilisis, usu dicam salutatus temporibus cu.</p>
+  </div>
+  <div class="notification-template" id="E_AI_WINTER">
+    <h1>AI Winter</h1>
+    <p>Lorem ipsum dolor sit amet, ne unum dissentias mei. Facer nullam euismod ex pri, dicit deserunt argumentum eos id. Quis epicuri nam in, usu no scripta assueverit. Vel reque nullam in, esse habeo semper vim in, in vitae admodum vim. His decore accusata quaestio ei, no electram laboramus mei. Eos id vitae dolore alienum, ea illud cetero diceret quo, ne doctus meliore delicatissimi sed. Mel nobis soluta laboramus ad, et vel assum facilisis, usu dicam salutatus temporibus cu.</p>
+  </div>
+  <div class="notification-template" id="E_AI_WINTER_END">
+    <h1>AI Winter Ended</h1>
+    <p>Lorem ipsum dolor sit amet, ne unum dissentias mei. Facer nullam euismod ex pri, dicit deserunt argumentum eos id. Quis epicuri nam in, usu no scripta assueverit. Vel reque nullam in, esse habeo semper vim in, in vitae admodum vim. His decore accusata quaestio ei, no electram laboramus mei. Eos id vitae dolore alienum, ea illud cetero diceret quo, ne doctus meliore delicatissimi sed. Mel nobis soluta laboramus ad, et vel assum facilisis, usu dicam salutatus temporibus cu.</p>
+  </div>
+  <table id="computeUnitSliderHost">
+    <tr><td colspan="2"><input id="computeUnitSlider" type="range" min="0" max="100" value="0" style="width:200px" /></td></tr>
+    <tr><td>Transistors</td><td align="right">Computers</td></tr>
+  </table>
+
+  <script src="main.js"></script>
 </body>
 </html>

@@ -1,16 +1,22 @@
 $ = $;
 
-const g_hacksEnabled = true;
-const g_speedUp = g_hacksEnabled ? 50 : 1;
-const g_eventSpeedUp = g_hacksEnabled ? 4 : 1;
+const clamp = (x, low, high) => Math.min(high, Math.max(low, x));
+
+
+const g_speedUpEnabled = false;
+const g_speedUp = g_speedUpEnabled ? 50 : 1;
+const g_eventSpeedUp = g_speedUpEnabled ? 4 : 1;
+
+const g_initialStateBoost = 100;
 
 const InitialState = {
     transistors: 0,
     transistorsBuilt: 0,
-    computers: g_hacksEnabled ? 1000000 : 0,
-    computersBuilt: 0,
-    factories: g_hacksEnabled ? 1 : 0,
-    factoriesBuilt: 0,
+    computers: g_initialStateBoost * 10,
+    computersBuilt: g_initialStateBoost * 10,
+    factories: g_initialStateBoost * 10,
+    factoriesBuilt: g_initialStateBoost * 10,
+    factoriesBuiltLastTime: -1,
     labs: 0,
     labsBuilt: 0,
     research: 0,
@@ -20,6 +26,8 @@ const InitialState = {
     integratedCircuitsBuilt: 0,
 
     popularity: 0.0,
+    unemployment: 0.0,
+
     aiWinterPopularityThreshold: Infinity,
     activeEvents: {},
 
@@ -38,13 +46,17 @@ const clone = (state) => Object.assign({}, state);
 
 const isResearched = r => g_currentState[r] === 1;
 const researchReward = (r, levels, def) => {
-    var m = def || 1;
+    var m = typeof def === 'undefined' ? 1 : def;
     for (var i = 0; i < levels.length; i++) {
         if (g_currentState[r + (i + 1)] === 1) {
             m = levels[i]
         }
     }
     return m;
+};
+
+const currentComputeUnits = s => {
+    return s.transistors + s.integratedCircuits;
 };
 
 class Operator {
@@ -180,7 +192,7 @@ class EventOperator extends ResearchOperator {
 var buildTransistor = new PurchaseOperator("Build Transistor", {}, { transistors: 1 });
 var buildComputer = new PurchaseOperator("Build Computer", s => (s.R_INTEGRATED_CIRCUITS ? { integratedCircuits: 5 } : { transistors: 10 }), { computers: 1 });
 var buildFactory = new PurchaseOperator("Build Factory", { computers: 5 }, { factories: 1 });
-var buildLab = new PurchaseOperator("Build Research Lab", s => ({ computers: 10 * (2 ** s.labsBuilt) }), { labs: 1 });
+var buildLab = new PurchaseOperator("Build Research Lab", s => ({ computers: ~~(10 * (1.1 ** s.labsBuilt)) }), { labs: 1 });
 
 var buildIntegratedCircuit = new PurchaseOperator("Build Integrated Circuit", {R_INTEGRATED_CIRCUITS: 1}, {}, { integratedCircuits: 1 });
 
@@ -252,6 +264,9 @@ allOperators.push(graphics2);
 allOperators.push(gpu1);
 allOperators.push(gpu2);
 
+var computersMassProduced = new ResearchOperator("Computers Mass Produced", { research: 2000 }, { research: 5000 }, {}, 'R_COMPUTERS_MASS_PRODUCED', ['R_INDUSTRIAL_ROBOTICS_1']);
+allOperators.push(computersMassProduced);
+
 // EVENTS
 var perceptrons = new EventOperator("Perceptrons", {}, 'E_PERCEPTRONS', ['R_ML_1'], handlePerceptrons, { 'R_ML_1': 10000 / g_eventSpeedUp });
 var aiWinter = new EventOperator("AI Winter", { research: 10000 }, 'E_AI_WINTER', ['E_PERCEPTRONS'], handleAiWinter, { 'E_PERCEPTRONS': 10000 / g_eventSpeedUp });
@@ -289,10 +304,13 @@ allOperators.push(aiWinterEnd);
 // User Interface
 //-----------------------------------------------------------------------------
 g_statusUi = $("<h1></h1>");
+g_computeUnitSliderHost = $("#computeUnitSliderHost");
+g_transistorsVsComputersSlider = $("#computeUnitSlider");
 
 function setupInterface() {
     $('.notification-template').hide();
     $('#status-host').append(g_statusUi);
+    g_computeUnitSliderHost.hide();
 
     for (let operator of allOperators) {
         var button = $("<button>");
@@ -332,8 +350,8 @@ function showNotification(el) {
     $("#sidebar").prepend(notif);
 }
 
-function computePopularityDelta(x) {
-    return x;
+function computePopularityDeltaScale(s, x) {
+    return x * Math.log(currentComputeUnits(s));
 }
 
 function handleOperatorClicked(operator) {
@@ -352,9 +370,29 @@ function handleOperatorClicked(operator) {
             g_currentState.transistors = 0;
         }
 
+        // HACK: Rapidly building factories increases unemployment.
+        if (operator === buildFactory) {
+            const now = +(new Date());
+            const timeSinceLast = now - g_currentState.factoriesBuiltLastTime;
+            const unemploymentDeltaMultiplier = researchReward('R_INDUSTRIAL_ROBOTICS_', [10, 20, 30], 0);
+            const unemploymentChange = unemploymentDeltaMultiplier * clamp((10000 - timeSinceLast) / 10000, 0, 1);
+            g_currentState.unemployment += unemploymentChange;
+            g_currentState.factoriesBuiltLastTime = now;
+        }
+
+        // HACK: Researching ICs shows compute units vs computers production slider
+        if (operator === researchIntegratedCircuits) {
+            g_computeUnitSliderHost.show();
+        }
+
+        // HACK: Building research lab decreases unemployment by 1
+        if (operator === buildLab) {
+            g_currentState.unemployment = clamp(g_currentState.unemployment, 0, Infinity);
+        }
+
         // Events
         if (operator === buildComputer && g_currentState.computersBuilt === 1) {
-            g_currentState.popularity += computePopularityDelta(1);
+            g_currentState.popularity += computePopularityDeltaScale(g_currentState, 1);
         }
 
         // AI Winter
@@ -368,19 +406,34 @@ let backgroundIntervalSeconds = 0.1;
 function backgroundTick() {
     g_currentState = { ...g_currentState };
 
-    var dtransistors = g_currentState.factories * backgroundIntervalSeconds * 5 * g_speedUp;
+    var workUnitsBase = g_currentState.factories * backgroundIntervalSeconds * 5 * g_speedUp;
 
     if (!g_currentState.R_INTEGRATED_CIRCUITS) {
-        g_currentState.transistors += dtransistors;
-        g_currentState.transistorsBuilt += dtransistors;
+        g_currentState.transistors += workUnitsBase;
+        g_currentState.transistorsBuilt += workUnitsBase;
     } else {
         var roboticsMultiplier = researchReward('R_INDUSTRIAL_ROBOTICS_', [2, 5, 10], 1);
         var mlPower = researchReward('R_ML_', [2, 3, 4, 5], 1);
 
-        var multiplier = (roboticsMultiplier) ** mlPower;
-        console.log(dtransistors * multiplier);
-        g_currentState.integratedCircuits += dtransistors * multiplier;
-        g_currentState.integratedCircuitsBuilt += dtransistors * multiplier;
+
+        var percentComputerEffort = ~~(g_transistorsVsComputersSlider.val()) / 100;
+        var percentTransistorEffort = 1 - percentComputerEffort;
+
+        const workUnitsTransformed = ((roboticsMultiplier) ** mlPower) * workUnitsBase;
+
+        // Transistors
+        var buildIcOps = workUnitsTransformed * percentTransistorEffort;
+        g_currentState.integratedCircuits += buildIcOps;
+        g_currentState.integratedCircuitsBuilt += buildIcOps;
+
+        // Computers
+        const maxBuildComputerOps = workUnitsTransformed * percentComputerEffort;
+        const costIc = buildComputer.costs(g_currentState).integratedCircuits;
+        const yieldsComputers = buildComputer.yields(g_currentState).computers;
+        const buildComputerOps = Math.min(maxBuildComputerOps, g_currentState.integratedCircuits / costIc);
+        console.log(buildIcOps, workUnitsTransformed, percentTransistorEffort, "!!!", maxBuildComputerOps, costIc, yieldsComputers, buildComputerOps)
+        g_currentState.integratedCircuits -= buildComputerOps * costIc;
+        g_currentState.computers += buildComputerOps * yieldsComputers;
     }
 
 
@@ -404,6 +457,17 @@ function backgroundTick() {
         var dresearch = g_currentState.labs * backgroundIntervalSeconds * icUpgradeMultiplier * g_speedUp;
         g_currentState.research += dresearch;
         g_currentState.researchBuilt += dresearch;
+    }
+
+    for (var i = 0; i < g_speedUp; i++) {
+        if (g_currentState.unemployment > 0) {
+            g_currentState.unemployment -= Math.log10(g_currentState.unemployment + 1) * backgroundIntervalSeconds;
+            g_currentState.unemployment = clamp(g_currentState.unemployment, 0, Infinity);
+        }
+    }
+
+    if (isResearched("R_COMPUTERS_MASS_PRODUCED")) {
+//        g_currentState
     }
 
     updateInterface();
