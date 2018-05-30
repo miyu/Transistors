@@ -2,12 +2,13 @@ $ = $;
 
 const g_hacksEnabled = true;
 const g_speedUp = g_hacksEnabled ? 50 : 1;
+const g_eventSpeedUp = g_hacksEnabled ? 4 : 1;
 
 const InitialState = {
     transistors: 0,
     transistorsBuilt: 0,
-    computers: 0, 
-    computersBuilt: 0, 
+    computers: g_hacksEnabled ? 1000000 : 0,
+    computersBuilt: 0,
     factories: g_hacksEnabled ? 1 : 0,
     factoriesBuilt: 0,
     labs: 0,
@@ -18,17 +19,33 @@ const InitialState = {
     integratedCircuits: 0,
     integratedCircuitsBuilt: 0,
 
+    popularity: 0.0,
+    aiWinterPopularityThreshold: Infinity,
+    activeEvents: {},
+
     R_INTEGRATED_CIRCUITS: 0,
 };
 
 let OpType = {
     default: 0,
     research: 1,
+    event: 2,
 }
 
 let g_currentState = { ...InitialState };
 
 const clone = (state) => Object.assign({}, state);
+
+const isResearched = r => g_currentState[r] === 1;
+const researchReward = (r, levels, def) => {
+    var m = def || 1;
+    for (var i = 0; i < levels.length; i++) {
+        if (g_currentState[r + (i + 1)] === 1) {
+            m = levels[i]
+        }
+    }
+    return m;
+};
 
 class Operator {
     constructor(name) {
@@ -125,6 +142,37 @@ class ResearchOperator extends PurchaseOperator {
     apply(state) {
         state = super.apply(state);
         state[this.key] = 1;
+        state[this.key + "_T"] = +(new Date());
+        return state;
+    }
+}
+
+class EventOperator extends ResearchOperator {
+    constructor(name, prereqs, key, dependencies, cb, timecond) {
+        super(name, prereqs, prereqs, {}, key, dependencies);
+        this.type = OpType.event;
+        this.cb = cb;
+        this.timecond = timecond || {};
+    }
+
+    availablilityCheck(state) {
+        const now = +(new Date());
+        let ok = super.availablilityCheck(state);
+        for (let [k, v] of Object.entries(this.timecond)) {
+            var tkey = k + "_T";
+            ok = ok && ((tkey in state) && ((now - state[k + "_T"]) > v));
+
+        }
+        return ok;
+    }
+
+    apply(state) {
+        state = super.apply(state);
+
+        if (this.cb) {
+            state = this.cb(state) || state;
+        }
+
         return state;
     }
 }
@@ -168,16 +216,74 @@ allOperators.push(upgradeIntegratedCircuits8);
 allOperators.push(upgradeIntegratedCircuits9);
 allOperators.push(upgradeIntegratedCircuits10);
 
-var researchLanguage1 = new ResearchOperator("Research Language 1", {labs:50}, { research: 100 }, { }, 'R_LANGUAGE_1', []);
-var researchLanguage2 = new ResearchOperator("Research Language 2", {}, { research: 1000 }, {}, 'R_LANGUAGE_2', ['R_LANGUAGE_1']);
-var researchLanguage3 = new ResearchOperator("Research Language 3", {}, { research: 10000 }, {}, 'R_LANGUAGE_3', ['R_LANGUAGE_2']);
-var researchLanguage4 = new ResearchOperator("Research Language 4", {}, { research: 100000 }, {}, 'R_LANGUAGE_4', ['R_LANGUAGE_3']);
-var researchLanguage5 = new ResearchOperator("Research Language 5", {}, { research: 1000000 }, {}, 'R_LANGUAGE_5', ['R_LANGUAGE_4']);
+var researchLanguage1 = new ResearchOperator("Research Language 1", { labs: 50 }, { research: 100 }, {}, 'R_LANGUAGE_1', []); // ASM
+var researchLanguage2 = new ResearchOperator("Research Language 2", {}, { research: 1000 }, {}, 'R_LANGUAGE_2', ['R_LANGUAGE_1']); // Low-level
+var researchLanguage3 = new ResearchOperator("Research Language 3", {}, { research: 10000 }, {}, 'R_LANGUAGE_3', ['R_LANGUAGE_2']); // C
+var researchLanguage4 = new ResearchOperator("Research Language 4", {}, { research: 100000 }, {}, 'R_LANGUAGE_4', ['R_LANGUAGE_3']); 
+var researchLanguage5 = new ResearchOperator("Research Language 5", {}, { research: 1000000 }, {}, 'R_LANGUAGE_5', ['R_LANGUAGE_4']); // Python
 allOperators.push(researchLanguage1);
 allOperators.push(researchLanguage2);
 allOperators.push(researchLanguage3);
 allOperators.push(researchLanguage4);
 allOperators.push(researchLanguage5);
+
+var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factories: 100 }, { research: 1000 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS']);
+var industrialRobotics2 = new ResearchOperator("Direct Drive Arm", {}, { research: 100000 }, {}, 'R_INDUSTRIAL_ROBOTICS_2', ['R_INDUSTRIAL_ROBOTICS_1']);
+var industrialRobotics3 = new ResearchOperator("ML Robots", {}, { research: 100000000 }, {}, 'R_INDUSTRIAL_ROBOTICS_3', ['R_INDUSTRIAL_ROBOTICS_2', 'R_ML_3']);
+allOperators.push(industrialRobotics1);
+allOperators.push(industrialRobotics2);
+allOperators.push(industrialRobotics3);
+
+var machineLearning1 = new ResearchOperator("Machine Learning I", { research: 500 }, { research: 1000 }, {}, 'R_ML_1', []);
+var machineLearning2 = new ResearchOperator("Machine Learning II (backprop)", { labs: 100 }, { research: 1000000 }, {}, 'R_ML_2', ['R_ML_1']);
+var machineLearning3 = new ResearchOperator("Machine Learning III", {}, { research: 1000000000 }, {}, 'R_ML_3', ['R_ML_2']);
+var machineLearning4 = new ResearchOperator("Machine Learning IV", {}, { research: 100000000000 }, {}, 'R_ML_4', ['R_ML_3']);
+allOperators.push(machineLearning1);
+allOperators.push(machineLearning2);
+allOperators.push(machineLearning3);
+allOperators.push(machineLearning4);
+
+var graphics1 = new ResearchOperator("Graphics I", { research: 2000 }, { research: 3000 }, {}, 'R_GRAPHICS_1', ['R_LANGUAGE_2']);
+var graphics2 = new ResearchOperator("Graphics II", {}, { research: 10000 }, {}, 'R_GRAPHICS_2', ['R_GRAPHICS_1']);
+var gpu1 = new ResearchOperator("GPUs I", { research: 30000 }, { research: 50000  }, {}, 'R_GPU_1', ['R_GRAPHICS_2']);
+var gpu2 = new ResearchOperator("GPUs II", { research: 1000000000 }, { research: 5000000000 }, {}, 'R_GPU_2', ['R_GPU_1']);
+allOperators.push(graphics1);
+allOperators.push(graphics2);
+allOperators.push(gpu1);
+allOperators.push(gpu2);
+
+// EVENTS
+var perceptrons = new EventOperator("Perceptrons", {}, 'E_PERCEPTRONS', ['R_ML_1'], handlePerceptrons, { 'R_ML_1': 10000 / g_eventSpeedUp });
+var aiWinter = new EventOperator("AI Winter", { research: 10000 }, 'E_AI_WINTER', ['E_PERCEPTRONS'], handleAiWinter, { 'E_PERCEPTRONS': 10000 / g_eventSpeedUp });
+var aiWinterEnd = new EventOperator("AI Winter End", s => ({ popularity: s.aiWinterPopularityThreshold }), 'E_AI_WINTER_END', ['E_AI_WINTER'], handleAiWinterEnd, {});
+
+function handlePerceptrons() {
+    showNotification('E_PERCEPTRON_NOTIFICATION');
+}
+
+function handleAiWinter(state) {
+    showNotification('E_AI_WINTER');
+
+    state.activeEvents.aiWinter = {
+        researchMultiplier: 2,
+        researchRate: 0.75,
+    };
+
+    state.aiWinterPopularityThreshold = state.popularity;
+    state.popularity -= 10;
+
+    return state;
+}
+
+function handleAiWinterEnd(state) {
+    showNotification('E_AI_WINTER_END');
+    delete state.activeEvents.aiWinter;
+}
+
+
+allOperators.push(perceptrons);
+allOperators.push(aiWinter);
+allOperators.push(aiWinterEnd);
 
 //-----------------------------------------------------------------------------
 // User Interface
@@ -185,14 +291,15 @@ allOperators.push(researchLanguage5);
 g_statusUi = $("<h1></h1>");
 
 function setupInterface() {
-    $(document.body).append(g_statusUi);
+    $('.notification-template').hide();
+    $('#status-host').append(g_statusUi);
 
     for (let operator of allOperators) {
         var button = $("<button>");
         button.click(() => handleOperatorClicked(operator));
         button.hide();
-        $(document.body).append(button);
 
+        $("#control-host").append(button);
         operator.button = button;
     }
 }
@@ -205,10 +312,11 @@ function updateInterface() {
             operator.button.show();
         }
 
-        if (operator.permitted(g_currentState)) {
-            operator.button.prop("disabled", false);
-        } else {
-            operator.button.prop("disabled", true);
+        var permitted = operator.permitted(g_currentState);
+        operator.button.prop("disabled", !permitted);
+
+        if (permitted && operator.type === OpType.event) {
+            operator.button.click();
         }
 
         var opcontent = operator.name;
@@ -218,12 +326,22 @@ function updateInterface() {
     }
 }
 
+function showNotification(el) {
+    const notif = $("#" + el);
+    notif.show();
+    $("#sidebar").prepend(notif);
+}
+
+function computePopularityDelta(x) {
+    return x;
+}
+
 function handleOperatorClicked(operator) {
     if (operator.permitted(g_currentState)) {
         g_currentState = operator.apply(g_currentState);
         console.log(g_currentState);
 
-        if (operator.type === OpType.research) {
+        if (operator.type === OpType.research || operator.type === OpType.event) {
             operator.button.remove();
         }
 
@@ -233,6 +351,14 @@ function handleOperatorClicked(operator) {
             g_currentState.integratedCircuits = g_currentState.transistors;
             g_currentState.transistors = 0;
         }
+
+        // Events
+        if (operator === buildComputer && g_currentState.computersBuilt === 1) {
+            g_currentState.popularity += computePopularityDelta(1);
+        }
+
+        // AI Winter
+        // on ML_1 && research 10000, AI Winter
 
         updateInterface();
     }
@@ -248,14 +374,17 @@ function backgroundTick() {
         g_currentState.transistors += dtransistors;
         g_currentState.transistorsBuilt += dtransistors;
     } else {
-        var researchLabOutputs = [2, 5, 10, 20, 50, 100, 500, 1500, 3000, 5000];
-        var icUpgradeMultiplier = 1;
-        for (var i = 0; i < researchLabOutputs.length; i++) {
-            if (g_currentState["R_INTEGRATED_CIRCUITS_" + (i + 1)] === 1) {
-                icUpgradeMultiplier = researchLabOutputs[i];
-            }
-        }
+        var roboticsMultiplier = researchReward('R_INDUSTRIAL_ROBOTICS_', [2, 5, 10], 1);
+        var mlPower = researchReward('R_ML_', [2, 3, 4, 5], 1);
 
+        var multiplier = (roboticsMultiplier) ** mlPower;
+        console.log(dtransistors * multiplier);
+        g_currentState.integratedCircuits += dtransistors * multiplier;
+        g_currentState.integratedCircuitsBuilt += dtransistors * multiplier;
+    }
+
+
+    if (true) { // research lab => research
         var languageUpgradeMultipliers = [1.1, 1.2, 1.3, 1.4, 1.5];
         var languageUpgradeMultiplier = 1;
         for (var i = 0; i < languageUpgradeMultipliers.length; i++) {
@@ -264,14 +393,18 @@ function backgroundTick() {
             }
         }
 
-        var researchLabOutput = icUpgradeMultiplier * languageUpgradeMultiplier;
-        g_currentState.integratedCircuits += dtransistors * researchLabOutput;
-        g_currentState.integratedCircuitsBuilt += dtransistors * researchLabOutput;
-    }
+        var researchLabOutputs = [2, 5, 10, 20, 50, 100, 500, 1500, 3000, 5000];
+        var icUpgradeMultiplier = 1;
+        for (var i = 0; i < researchLabOutputs.length; i++) {
+            if (g_currentState["R_INTEGRATED_CIRCUITS_" + (i + 1)] === 1) {
+                icUpgradeMultiplier = researchLabOutputs[i];
+            }
+        }
 
-    var dresearch = g_currentState.labs * backgroundIntervalSeconds * 1 * g_speedUp;
-    g_currentState.research += dresearch;
-    g_currentState.researchBuilt += dresearch;
+        var dresearch = g_currentState.labs * backgroundIntervalSeconds * icUpgradeMultiplier * g_speedUp;
+        g_currentState.research += dresearch;
+        g_currentState.researchBuilt += dresearch;
+    }
 
     updateInterface();
 
