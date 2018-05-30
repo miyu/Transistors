@@ -3,9 +3,9 @@ $ = $;
 const clamp = (x, low, high) => Math.min(high, Math.max(low, x));
 
 
-const g_speedUpEnabled = true;
-const g_speedUp = g_speedUpEnabled ? 10 : 1;
-const g_eventSpeedUp = g_speedUpEnabled ? 4 : 1;
+const g_speedUpEnabled = false;
+const g_speedUp = g_speedUpEnabled ? 4 : 1;
+const g_eventSpeedUp = g_speedUpEnabled ? 1 : 1;
 
 const g_initialStateBoost = 0;
 
@@ -230,7 +230,7 @@ allOperators.push(upgradeIntegratedCircuits8);
 allOperators.push(upgradeIntegratedCircuits9);
 allOperators.push(upgradeIntegratedCircuits10);
 
-var researchLanguage1 = new ResearchOperator("Research Language 1", { labs: 50 }, { research: 100 }, {}, 'R_LANGUAGE_1', []); // ASM
+var researchLanguage1 = new ResearchOperator("Research Language 1", { labs: 10 }, { research: 100 }, {}, 'R_LANGUAGE_1', []); // ASM
 var researchLanguage2 = new ResearchOperator("Research Language 2", {}, { research: 1000 }, {}, 'R_LANGUAGE_2', ['R_LANGUAGE_1']); // Low-level
 var researchLanguage3 = new ResearchOperator("Research Language 3", {}, { research: 10000 }, {}, 'R_LANGUAGE_3', ['R_LANGUAGE_2']); // C
 var researchLanguage4 = new ResearchOperator("Research Language 4", {}, { research: 100000 }, {}, 'R_LANGUAGE_4', ['R_LANGUAGE_3']); 
@@ -241,7 +241,7 @@ allOperators.push(researchLanguage3);
 allOperators.push(researchLanguage4);
 allOperators.push(researchLanguage5);
 
-var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factories: 100 }, { research: 1000 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS']);
+var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factories: 30 }, { research: 1000 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS']);
 var industrialRobotics2 = new ResearchOperator("Direct Drive Arm", {}, { research: 100000 }, {}, 'R_INDUSTRIAL_ROBOTICS_2', ['R_INDUSTRIAL_ROBOTICS_1']);
 var industrialRobotics3 = new ResearchOperator("ML Robots", {}, { research: 100000000 }, {}, 'R_INDUSTRIAL_ROBOTICS_3', ['R_INDUSTRIAL_ROBOTICS_2', 'R_ML_3']);
 allOperators.push(industrialRobotics1);
@@ -257,7 +257,7 @@ allOperators.push(machineLearning2);
 allOperators.push(machineLearning3);
 allOperators.push(machineLearning4);
 
-var graphics1 = new ResearchOperator("Graphics I", { research: 2000 }, { research: 3000 }, {}, 'R_GRAPHICS_1', ['R_LANGUAGE_2']);
+var graphics1 = new ResearchOperator("Graphics I", { research: 2000 }, { research: 3000 }, {}, 'R_GRAPHICS_1', ['R_LANGUAGE_1']);
 var graphics2 = new ResearchOperator("Graphics II", {}, { research: 10000 }, {}, 'R_GRAPHICS_2', ['R_GRAPHICS_1']);
 var gpu1 = new ResearchOperator("GPUs I", { research: 30000 }, { research: 50000  }, {}, 'R_GPU_1', ['R_GRAPHICS_2']);
 var gpu2 = new ResearchOperator("GPUs II", { research: 1000000000 }, { research: 5000000000 }, {}, 'R_GPU_2', ['R_GPU_1']);
