@@ -3,10 +3,16 @@
 <head>
   <title>Transistors!</title>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <style>
+    #control-host button {
+      clear: both;
+      float: left;
+    }
+  </style>
 </head>
 <body>
   <div>
-    <div id="status-host"></div>
+    <div id="status-host" style="position: absolute; bottom: 0"></div>
     <div id="x" style="display: flex; flex-direction: row">
       <div id="control-host" style="flex: 1"></div>
       <div id="sidebar" style="flex: 1; background: red"></div>

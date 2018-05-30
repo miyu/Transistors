@@ -325,7 +325,8 @@ function setupInterface() {
 }
 
 function updateInterface() {
-    g_statusUi.text(JSON.stringify(g_currentState, 0, 4));
+    var json = "{ " + Object.entries(g_currentState).map(([k, v]) => k + ": " + (typeof v === 'number' ? v.toFixed(1) : '[object]')).join(", ") + " }";
+    g_statusUi.text(json);
 
     for (let operator of allOperators) {
         if (operator.prereqs(g_currentState)) {
