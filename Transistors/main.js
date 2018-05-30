@@ -3,11 +3,11 @@ $ = $;
 const clamp = (x, low, high) => Math.min(high, Math.max(low, x));
 
 
-const g_speedUpEnabled = false;
-const g_speedUp = g_speedUpEnabled ? 50 : 1;
+const g_speedUpEnabled = true;
+const g_speedUp = g_speedUpEnabled ? 10 : 1;
 const g_eventSpeedUp = g_speedUpEnabled ? 4 : 1;
 
-const g_initialStateBoost = 100;
+const g_initialStateBoost = 0;
 
 const InitialState = {
     transistors: 0,
@@ -26,6 +26,8 @@ const InitialState = {
     integratedCircuitsBuilt: 0,
 
     popularity: 0.0,
+    popularityLostToUnemployment: 0.0,
+
     unemployment: 0.0,
 
     aiWinterPopularityThreshold: Infinity,
@@ -264,7 +266,7 @@ allOperators.push(graphics2);
 allOperators.push(gpu1);
 allOperators.push(gpu2);
 
-var computersMassProduced = new ResearchOperator("Computers Mass Produced", { research: 2000 }, { research: 5000 }, {}, 'R_COMPUTERS_MASS_PRODUCED', ['R_INDUSTRIAL_ROBOTICS_1']);
+var computersMassProduced = new ResearchOperator("Computers Mass Produced", { research: 300 }, { research: 500 }, {}, 'R_COMPUTERS_MASS_PRODUCED', ['R_INDUSTRIAL_ROBOTICS_1']);
 allOperators.push(computersMassProduced);
 
 // EVENTS
@@ -351,7 +353,7 @@ function showNotification(el) {
 }
 
 function computePopularityDeltaScale(s, x) {
-    return x * Math.log(currentComputeUnits(s));
+    return x * Math.log(currentComputeUnits(s) + 2); // 2 so tests fine if at 0 transistors
 }
 
 function handleOperatorClicked(operator) {
@@ -380,8 +382,8 @@ function handleOperatorClicked(operator) {
             g_currentState.factoriesBuiltLastTime = now;
         }
 
-        // HACK: Researching ICs shows compute units vs computers production slider
-        if (operator === researchIntegratedCircuits) {
+        // HACK: Researching computersMassProduced shows compute units vs computers production slider
+        if (operator === computersMassProduced) {
             g_computeUnitSliderHost.show();
         }
 
@@ -463,6 +465,22 @@ function backgroundTick() {
         if (g_currentState.unemployment > 0) {
             g_currentState.unemployment -= Math.log10(g_currentState.unemployment + 1) * backgroundIntervalSeconds;
             g_currentState.unemployment = clamp(g_currentState.unemployment, 0, Infinity);
+        }
+
+        if (g_currentState.unemployment > 1000) {
+            let popularityLost = computePopularityDeltaScale(g_currentState, 0.1) * backgroundIntervalSeconds;
+            g_currentState.popularity -= popularityLost;
+            g_currentState.popularityLostToUnemployment += popularityLost;
+        }
+
+        if (g_currentState.unemployment < 500) {
+            let popularityRecovered = computePopularityDeltaScale(g_currentState, 0.05) * backgroundIntervalSeconds;
+            popularityRecovered = Math.min(
+                popularityRecovered,
+                g_currentState.popularityLostToUnemployment);
+
+            g_currentState.popularity += popularityRecovered;
+            g_currentState.popularityLostToUnemployment -= popularityRecovered;
         }
     }
 
