@@ -63,6 +63,7 @@ function trRender() {
   trRenderOpUi('!OA', '#make_transistor')
   trRenderOpUi('!OB', '#make_computer')
   trRenderOpUi('!OC', '#make_transistor_factory')
+  trRenderOpUi('!OD', '#make_research_lab')
 }
 
 //-------------------------------
@@ -229,7 +230,7 @@ function start_game() {
   send_command("start");
 
   setInterval(() => {
-    send_command("0");
+    send_command("BAD_COMMAND_TO_FORCE_SOCKET_FLUSH");
   }, 100);
 }
 function cancel_game() {
@@ -450,6 +451,7 @@ window.onload=hidehelp;
             <button type="button" id="make_transistor">Make Transistor</button><br/>
             <button type="button" id="make_computer">Make Computer</button><br/>
             <button type="button" id="make_transistor_factory">Make Transistor Factory</button><br/>
+            <button type="button" id="make_research_lab">Make Research Lab</button><br/>
           </td>
         </tr>
       </table>

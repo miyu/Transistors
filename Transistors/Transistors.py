@@ -17,8 +17,10 @@ SZ001_socketio = None
 SZ001_exec_command = None
 
 # Defines
-C_DT = 0.1
+C_TICKS_PER_SECOND = 7
+C_DT = 1.0 / C_TICKS_PER_SECOND
 C_TRANSISTOR_FACTORY_BUILD_RATE = 5
+C_RESEARCH_LAB_BUILD_RATE_FN = lambda x: 0.33 * math.log2(x + 1)
 
 ST_TIME = "time"
 ST_TRANSISTORS = "transistors"
@@ -30,6 +32,8 @@ ST_TRANSISTOR_FACTORIES_TOTAL_BUILT = "transistor_factories_total_built"
 
 ST_RESEARCH_LABS = "research_labs"
 ST_RESEARCH_LABS_TOTAL_BUILT = "research_labs_total_built"
+ST_RESEARCH = "research"
+ST_RESEARCH_TOTAL_BUILT = "research_total_built"
 
 # filled later
 OPERATORS = []
@@ -86,6 +90,10 @@ class State():
 
     if self.data[ST_TRANSISTOR_FACTORIES_TOTAL_BUILT] > 0:
       status += f", {math.floor(self.data[ST_TRANSISTOR_FACTORIES])} transistor factories"
+      
+    if self.data[ST_RESEARCH_LABS_TOTAL_BUILT] > 0:
+      status += f", {math.floor(self.data[ST_RESEARCH_LABS])} labs"
+      status += f", {math.floor(self.data[ST_RESEARCH])} research"
 
     status += f" | t={self.data[ST_TIME]:.1f}s"
 
@@ -139,6 +147,8 @@ INITIAL_STATE = State({
   ST_TRANSISTOR_FACTORIES_TOTAL_BUILT: 0,
   ST_RESEARCH_LABS: 0,
   ST_RESEARCH_LABS_TOTAL_BUILT: 0,
+  ST_RESEARCH: 0,
+  ST_RESEARCH_TOTAL_BUILT: 0,
 }, OPERATORS)
 #</INITIAL_STATE>
 
@@ -155,6 +165,10 @@ def transition_step_time(s):
   snew = s.__copy__()
   snew.data[ST_TIME] += C_DT
   snew.data[ST_TRANSISTORS] += snew.data[ST_TRANSISTOR_FACTORIES] * C_TRANSISTOR_FACTORY_BUILD_RATE * C_DT
+  
+  research_gain = C_RESEARCH_LAB_BUILD_RATE_FN(snew.data[ST_RESEARCH_LABS])
+  snew.data[ST_RESEARCH] += research_gain
+  snew.data[ST_RESEARCH_TOTAL_BUILT] += research_gain
   return snew
 
 def apply_cost(snew, costs):
