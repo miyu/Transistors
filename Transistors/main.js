@@ -3,24 +3,24 @@ $ = $;
 const clamp = (x, low, high) => Math.min(high, Math.max(low, x));
 
 
-const g_speedUpEnabled = false;
+const g_speedUpEnabled = true;
 const g_speedUp = g_speedUpEnabled ? 4 : 1;
-const g_eventSpeedUp = g_speedUpEnabled ? 1 : 1;
+const g_eventSpeedUp = g_speedUpEnabled ? 4 : 1;
 
-const g_initialStateBoost = 0;
+const g_initialStateBoost = window.location.search.includes("cheats") ? 100000000000 : 0;
 
 const InitialState = {
     transistors: 0,
     transistorsBuilt: 0,
-    computers: g_initialStateBoost * 10,
-    computersBuilt: g_initialStateBoost * 10,
-    factories: g_initialStateBoost * 10,
-    factoriesBuilt: g_initialStateBoost * 10,
+    computers: Math.min(g_initialStateBoost * 10, 10000),
+    computersBuilt: Math.min(g_initialStateBoost * 10, 10000),
+    factories: Math.min(g_initialStateBoost * 10, 10000),
+    factoriesBuilt: Math.min(g_initialStateBoost * 10, 10000),
     factoriesBuiltLastTime: -1,
-    labs: 0,
-    labsBuilt: 0,
-    research: 0,
-    researchBuilt: 0,
+    labs: Math.min(g_initialStateBoost * 10, 1000),
+    labsBuilt: Math.min(g_initialStateBoost * 10, 1000),
+    research: Math.min(g_initialStateBoost * 10, 10000000),
+    researchBuilt: Math.min(g_initialStateBoost * 10, 10000000),
 
     integratedCircuits: 0,
     integratedCircuitsBuilt: 0,
@@ -59,6 +59,10 @@ const researchReward = (r, levels, def) => {
 
 const currentComputeUnits = s => {
     return s.transistors + s.integratedCircuits;
+};
+
+const totalComputeUnits = s => {
+    return s.transistorsBuilt + s.integratedCircuitsBuilt;
 };
 
 class Operator {
@@ -131,17 +135,25 @@ class PurchaseOperator extends Operator {
 }
 
 class ResearchOperator extends PurchaseOperator {
-    constructor(name, prereqs, costs, yields, key, dependencies) {
+    constructor(name, prereqs, costs, yields, key, dependencies, cb, timecond) {
         super(name, prereqs, costs, yields);
+        this.type = OpType.research
+
         this.key = key;
         this.dependencies = dependencies;
-        this.type = OpType.research
+        this.cb = cb;
+        this.timecond = timecond || {};
     }
 
     availablilityCheck(state) {
         let ok = state[this.key] !== 1;
         for (let dep of this.dependencies) {
-            ok = state[dep] === 1;
+            ok = ok && (state[dep] === 1);
+        }
+        const now = +(new Date());
+        for (let [k, v] of Object.entries(this.timecond)) {
+            var tkey = k + "_T";
+            ok = ok && ((tkey in state) && ((now - state[k + "_T"]) > v));
         }
         return ok;
     }
@@ -158,37 +170,19 @@ class ResearchOperator extends PurchaseOperator {
         state = super.apply(state);
         state[this.key] = 1;
         state[this.key + "_T"] = +(new Date());
+        
+        if (this.cb) {
+            state = this.cb(state) || state;
+        }
+
         return state;
     }
 }
 
 class EventOperator extends ResearchOperator {
     constructor(name, prereqs, key, dependencies, cb, timecond) {
-        super(name, prereqs, prereqs, {}, key, dependencies);
+        super(name, prereqs, prereqs, {}, key, dependencies, cb, timecond);
         this.type = OpType.event;
-        this.cb = cb;
-        this.timecond = timecond || {};
-    }
-
-    availablilityCheck(state) {
-        const now = +(new Date());
-        let ok = super.availablilityCheck(state);
-        for (let [k, v] of Object.entries(this.timecond)) {
-            var tkey = k + "_T";
-            ok = ok && ((tkey in state) && ((now - state[k + "_T"]) > v));
-
-        }
-        return ok;
-    }
-
-    apply(state) {
-        state = super.apply(state);
-
-        if (this.cb) {
-            state = this.cb(state) || state;
-        }
-
-        return state;
     }
 }
 
@@ -231,7 +225,7 @@ allOperators.push(upgradeIntegratedCircuits8);
 allOperators.push(upgradeIntegratedCircuits9);
 allOperators.push(upgradeIntegratedCircuits10);
 
-var researchLanguage1 = new ResearchOperator("Research Language 1", { labs: 10 }, { research: 100 }, {}, 'R_LANGUAGE_1', []); // ASM
+var researchLanguage1 = new ResearchOperator("Research Language 1", { labs: 5 }, { research: 100 }, {}, 'R_LANGUAGE_1', []); // ASM
 var researchLanguage2 = new ResearchOperator("Research Language 2", {}, { research: 1000 }, {}, 'R_LANGUAGE_2', ['R_LANGUAGE_1']); // Low-level
 var researchLanguage3 = new ResearchOperator("Research Language 3", {}, { research: 10000 }, {}, 'R_LANGUAGE_3', ['R_LANGUAGE_2']); // C
 var researchLanguage4 = new ResearchOperator("Research Language 4", {}, { research: 100000 }, {}, 'R_LANGUAGE_4', ['R_LANGUAGE_3']); 
@@ -242,7 +236,7 @@ allOperators.push(researchLanguage3);
 allOperators.push(researchLanguage4);
 allOperators.push(researchLanguage5);
 
-var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factories: 30 }, { research: 1000 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS']);
+var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factories: 10 }, { research: 100 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS']);
 var industrialRobotics2 = new ResearchOperator("Direct Drive Arm", {}, { research: 100000 }, {}, 'R_INDUSTRIAL_ROBOTICS_2', ['R_INDUSTRIAL_ROBOTICS_1']);
 var industrialRobotics3 = new ResearchOperator("ML Robots", {}, { research: 100000000 }, {}, 'R_INDUSTRIAL_ROBOTICS_3', ['R_INDUSTRIAL_ROBOTICS_2', 'R_ML_3']);
 allOperators.push(industrialRobotics1);
@@ -250,30 +244,90 @@ allOperators.push(industrialRobotics2);
 allOperators.push(industrialRobotics3);
 
 var machineLearning1 = new ResearchOperator("Machine Learning I", { research: 500 }, { research: 1000 }, {}, 'R_ML_1', []);
-var machineLearning2 = new ResearchOperator("Machine Learning II (backprop)", { labs: 100 }, { research: 1000000 }, {}, 'R_ML_2', ['R_ML_1']);
-var machineLearning3 = new ResearchOperator("Machine Learning III", {}, { research: 1000000000 }, {}, 'R_ML_3', ['R_ML_2']);
-var machineLearning4 = new ResearchOperator("Machine Learning IV", {}, { research: 100000000000 }, {}, 'R_ML_4', ['R_ML_3']);
+var machineLearning2 = new ResearchOperator("Machine Learning II (backprop)", { labsBuilt: 5 }, { labsBuilt: 15, research: 5000 }, {}, 'R_ML_2', ['R_ML_1'], null, { 'E_AI_WINTER': 10000 / g_eventSpeedUp });
+var machineLearning3 = new ResearchOperator("Machine Learning III", {}, { research: 2000000 }, {}, 'R_ML_3', ['R_ML_2', 'R_GPU_3']);
+var machineLearning4 = new ResearchOperator("Machine Learning IV", {}, { research: 5000000 }, {}, 'R_ML_4', ['R_ML_3']);
+var machineLearning4 = new ResearchOperator("Machine Learning V", {}, { research: 75000000 }, {}, 'R_ML_5', ['R_ML_4', 'R_GPU_4']);
 allOperators.push(machineLearning1);
 allOperators.push(machineLearning2);
 allOperators.push(machineLearning3);
 allOperators.push(machineLearning4);
+allOperators.push(machineLearning5);
 
-var graphics1 = new ResearchOperator("Graphics I", { research: 2000 }, { research: 3000 }, {}, 'R_GRAPHICS_1', ['R_LANGUAGE_1']);
-var graphics2 = new ResearchOperator("Graphics II", {}, { research: 10000 }, {}, 'R_GRAPHICS_2', ['R_GRAPHICS_1']);
-var gpu1 = new ResearchOperator("GPUs I", { research: 30000 }, { research: 50000  }, {}, 'R_GPU_1', ['R_GRAPHICS_2']);
-var gpu2 = new ResearchOperator("GPUs II", { research: 1000000000 }, { research: 5000000000 }, {}, 'R_GPU_2', ['R_GPU_1']);
+var graphics0 = new ResearchOperator("Text-based User Interfaces", { research: 100 }, { research: 200 }, {}, 'R_GRAPHICS_0', ['R_LANGUAGE_1']);
+var graphics1 = new ResearchOperator("Graphical User Interfaces", { research: 1000 }, { research: 1500 }, {}, 'R_GRAPHICS_1', ['R_GRAPHICS_0']);
+var graphics2 = new ResearchOperator("3D Graphics", {}, { research: 10000 }, {}, 'R_GRAPHICS_2', ['R_GRAPHICS_1']);
+var graphicsFirstMice = new ResearchOperator("The Mouse", { research: 2000 }, { research: 2500 }, {}, 'R_MOUSE', ['R_GRAPHICS_1']);
+
+var networking1 = new ResearchOperator("Networks", { research: 500 }, { research: 1000 }, {}, 'R_NETWORKING_1', ['R_LANGUAGE_1']);
+var networking2 = new ResearchOperator("The Internet", { research: 1000 }, { research: 1500 }, {}, 'R_NETWORKING_2', ['R_NETWORKING_1']);
+var email = new ResearchOperator("Email", { research: 100 }, { research: 200 }, {}, 'R_EMAIL', ['R_GRAPHICS_0', 'R_NETWORKING_2'], handleAddPopularityFactory(1));
+var instantMessaging = new ResearchOperator("Instant Messaging", { research: 200 }, { research: 400 }, {}, 'R_CHAT', ['R_GRAPHICS_0', 'R_NETWORKING_2'], handleAddPopularityFactory(1));
+
+var eventInventionOfMouse = new EventOperator("The Invention of the Mouse", { }, 'E_MOUSE_INVENTION', ['R_MOUSE'], () => showNotification('E_MOUSE_INVENTED'), { });
+var eventPersonalComputing = new EventOperator("Personal Computing", { }, 'E_PERSONAL_COMPUTING', ['E_MOUSE_INVENTION', 'R_COMPUTERS_MASS_PRODUCED'], handlePersonalComputing, { E_MOUSE_INVENTION: 10000 / g_eventSpeedUp });
+
+var browsers = new ResearchOperator("Web Browsers", { research: 1500 }, { research: 2500 }, {}, 'R_INTERNET', ['R_GRAPHICS_1', 'R_NETWORKING_2', 'E_PERSONAL_COMPUTING'], handleAddPopularityFactory(1));
+
+var research2DGames = new ResearchOperator("Research 2D Computer Games", { }, { research: 5000 }, {}, 'R_COMPUTER_GAMES_2D', ['E_PERSONAL_COMPUTING'], handleResearch2DGames);
+var research3DGames = new ResearchOperator("Research 3D Computer Games", { research: 10000 }, { research: 15000 }, {}, 'R_COMPUTER_GAMES_3D', ['R_COMPUTER_GAMES_2D', 'R_GRAPHICS_2'], handleResearch3DGames);
+
+var gpu1 = new ResearchOperator("GPUs I", { research: 10000 }, { research: 15000  }, {}, 'R_GPU_1', ['R_COMPUTER_GAMES_2D']); //90s GPUs
+var gpu2 = new ResearchOperator("GPUs II", { research: 100000 }, { research: 150000 }, {}, 'R_GPU_2', ['R_GPU_1']); // 2000's GPUs
+var gpu3 = new ResearchOperator("GPUs III", { research: 1000000 }, { research: 1500000 }, {}, 'R_GPU_3', ['R_GPU_2']); // modern GPUs & compute
+var gpu4 = new ResearchOperator("GPUs IV", { research: 10000000 }, { research: 50000000 }, {}, 'R_GPU_4', ['R_GPU_3']); // future GPUs
+var vr = new ResearchOperator("Virtual Reality", { research: 1000000 }, { research: 2000000 }, {}, 'R_VR', ['R_GPU_3'], handleResearchVirtualReality);
+
+var iot = new ResearchOperator("", { research: 200 }, { research: 400 }, {}, 'R_CHAT', ['R_GRAPHICS_0', 'R_NETWORKING_2'], handleAddPopularityFactory(1));
+
+allOperators.push(graphics0);
 allOperators.push(graphics1);
 allOperators.push(graphics2);
+allOperators.push(graphicsFirstMice);
+
+allOperators.push(networking1);
+allOperators.push(networking2);
+allOperators.push(email);
+allOperators.push(instantMessaging);
+
+allOperators.push(eventInventionOfMouse);
+allOperators.push(eventPersonalComputing);
+
+allOperators.push(browsers);
+
+allOperators.push(research2DGames);
+allOperators.push(research3DGames);
 allOperators.push(gpu1);
 allOperators.push(gpu2);
+allOperators.push(gpu3);
+allOperators.push(gpu4);
+allOperators.push(vr);
+
+function handleAddPopularityFactory(n) {
+    return state => {
+        state.popularity += computePopularityDeltaScale(g_currentState, n);
+    };
+}
+
+function handleResearch2DGames(state) {
+    state.popularity += computePopularityDeltaScale(g_currentState, 1);
+}
+
+function handleResearch3DGames(state) {
+    state.popularity += computePopularityDeltaScale(g_currentState, 1);
+}
+
+function handleResearchVirtualReality(state) {
+    state.popularity += computePopularityDeltaScale(g_currentState, 1);
+}
 
 var computersMassProduced = new ResearchOperator("Computers Mass Produced", { research: 300 }, { research: 500 }, {}, 'R_COMPUTERS_MASS_PRODUCED', ['R_INDUSTRIAL_ROBOTICS_1']);
 allOperators.push(computersMassProduced);
 
-// EVENTS
+// EVENTS s => ({ popularity: s.aiWinterPopularityThreshold })
 var perceptrons = new EventOperator("Perceptrons", {}, 'E_PERCEPTRONS', ['R_ML_1'], handlePerceptrons, { 'R_ML_1': 10000 / g_eventSpeedUp });
 var aiWinter = new EventOperator("AI Winter", { research: 10000 }, 'E_AI_WINTER', ['E_PERCEPTRONS'], handleAiWinter, { 'E_PERCEPTRONS': 10000 / g_eventSpeedUp });
-var aiWinterEnd = new EventOperator("AI Winter End", s => ({ popularity: s.aiWinterPopularityThreshold }), 'E_AI_WINTER_END', ['E_AI_WINTER'], handleAiWinterEnd, {});
+var aiWinterEnd = new EventOperator("AI Winter End", {}, 'E_AI_WINTER_END', ['E_AI_WINTER', 'R_ML_2'], handleAiWinterEnd, {});
 
 function handlePerceptrons() {
     showNotification('E_PERCEPTRON_NOTIFICATION');
@@ -309,6 +363,11 @@ var eventFirstIntegratedCircuit = new EventOperator("First Integrated Circuit", 
 allOperators.push(eventFirstTransistor);
 allOperators.push(eventFirstComputer);
 allOperators.push(eventFirstIntegratedCircuit);
+
+function handlePersonalComputing(state) {
+    showNotification('E_PERSONAL_COMPUTING');
+    state.popularity += computePopularityDeltaScale(g_currentState, 2);
+}
 
 //-----------------------------------------------------------------------------
 // User Interface
@@ -375,7 +434,8 @@ function showNotification(el) {
 }
 
 function computePopularityDeltaScale(s, x) {
-    return x * Math.log(currentComputeUnits(s) + 2); // 2 so tests fine if at 0 transistors
+    if (x === undefined) throw "arg 2 probably missing";
+    return x * Math.log(totalComputeUnits(s) + 2); // 2 so tests fine if at 0 transistors
 }
 
 function handleOperatorClicked(operator) {
@@ -439,7 +499,6 @@ function backgroundTick() {
         var roboticsMultiplier = researchReward('R_INDUSTRIAL_ROBOTICS_', [2, 5, 10], 1);
         var mlPower = researchReward('R_ML_', [2, 3, 4, 5], 1);
 
-
         var percentComputerEffort = ~~(g_transistorsVsComputersSlider.val()) / 100;
         var percentTransistorEffort = 1 - percentComputerEffort;
 
@@ -478,7 +537,9 @@ function backgroundTick() {
             }
         }
 
-        var dresearch = g_currentState.labs * backgroundIntervalSeconds * icUpgradeMultiplier * g_speedUp;
+        var mouseMultiplier = isResearched('R_MOUSE') ? 1.1 : 1;
+
+        var dresearch = g_currentState.labs * backgroundIntervalSeconds * icUpgradeMultiplier * mouseMultiplier * g_speedUp;
         g_currentState.research += dresearch;
         g_currentState.researchBuilt += dresearch;
     }
