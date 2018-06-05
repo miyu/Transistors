@@ -1,10 +1,14 @@
+// Midgame:
+// "{"transistors":0,"transistorsBuilt":1579,"computers":8120.616000000094,"computersBuilt":1354,"factories":19,"factoriesBuilt":19,"factoriesBuiltLastTime":1528184971802,"labs":16,"labsBuilt":16,"research":32576.200000000055,"researchBuilt":128826.19999999963,"integratedCircuits":0,"integratedCircuitsBuilt":117314.07999999894,"popularity":67.66090925973637,"popularityLostToUnemployment":0,"unemployment":1.058756466984667e-16,"aiWinterPopularityThreshold":55.4749245069211,"activeEvents":{},"R_INTEGRATED_CIRCUITS":1,"E_FIRST_TRANSISTOR":1,"E_FIRST_TRANSISTOR_T":1528184764016,"E_FIRST_COMPUTER":1,"E_FIRST_COMPUTER_T":1528184767226,"R_INTEGRATED_CIRCUITS_T":1528184806230,"E_FIRST_INTEGRATED_CIRCUIT":1,"E_FIRST_INTEGRATED_CIRCUIT_T":1528184806314,"R_INDUSTRIAL_ROBOTICS_1":1,"R_INDUSTRIAL_ROBOTICS_1_T":1528184823688,"R_LANGUAGE_1":1,"R_LANGUAGE_1_T":1528184833366,"R_GRAPHICS_0":1,"R_GRAPHICS_0_T":1528184859014,"R_INTEGRATED_CIRCUITS_1":1,"R_INTEGRATED_CIRCUITS_1_T":1528184867830,"R_COMPUTERS_MASS_PRODUCED":1,"R_COMPUTERS_MASS_PRODUCED_T":1528184884842,"R_INTEGRATED_CIRCUITS_2":1,"R_INTEGRATED_CIRCUITS_2_T":1528184906026,"R_INTEGRATED_CIRCUITS_3":1,"R_INTEGRATED_CIRCUITS_3_T":1528184913418,"R_GRAPHICS_1":1,"R_GRAPHICS_1_T":1528184922141,"R_NETWORKING_1":1,"R_NETWORKING_1_T":1528184926093,"R_INTEGRATED_CIRCUITS_4":1,"R_INTEGRATED_CIRCUITS_4_T":1528184934080,"R_MOUSE":1,"R_MOUSE_T":1528184942906,"E_MOUSE_INVENTION":1,"E_MOUSE_INVENTION_T":1528184942909,"R_NETWORKING_2":1,"R_NETWORKING_2_T":1528184943349,"R_EMAIL":1,"R_EMAIL_T":1528184943952,"R_CHAT":1,"R_CHAT_T":1528184944275,"E_PERSONAL_COMPUTING":1,"E_PERSONAL_COMPUTING_T":1528184945514,"R_ML_1":1,"R_ML_1_T":1528184953487,"R_INTERNET":1,"R_INTERNET_T":1528184954276,"R_LANGUAGE_2":1,"R_LANGUAGE_2_T":1528184955619,"E_PERCEPTRONS":1,"E_PERCEPTRONS_T":1528184956037,"E_AI_WINTER":1,"E_AI_WINTER_T":1528184969602,"R_COMPUTER_GAMES_2D":1,"R_COMPUTER_GAMES_2D_T":1528184982627,"R_ML_2":1,"R_ML_2_T":1528185000298,"E_AI_WINTER_END":1,"E_AI_WINTER_END_T":1528185000303,"R_INTEGRATED_CIRCUITS_5":1,"R_INTEGRATED_CIRCUITS_5_T":1528185004497,"R_LANGUAGE_3":1,"R_LANGUAGE_3_T":1528185014221,"R_GRAPHICS_2":1,"R_GRAPHICS_2_T":1528185017757,"R_COMPUTER_GAMES_3D":1,"R_COMPUTER_GAMES_3D_T":1528185028508,"R_GPU_1":1,"R_GPU_1_T":1528185035054}"
+
+
 $ = $;
 
 const clamp = (x, low, high) => Math.min(high, Math.max(low, x));
 
 
 const g_speedUpEnabled = true;
-const g_speedUp = g_speedUpEnabled ? 4 : 1;
+const g_speedUp = g_speedUpEnabled ? 2 : 1;
 const g_eventSpeedUp = g_speedUpEnabled ? 4 : 1;
 
 const g_initialStateBoost = window.location.search.includes("cheats") ? 100000000000 : 0;
@@ -16,11 +20,10 @@ const InitialState = {
     computersBuilt: Math.min(g_initialStateBoost * 10, 10000),
     factories: Math.min(g_initialStateBoost * 10, 10000),
     factoriesBuilt: Math.min(g_initialStateBoost * 10, 10000),
-    factoriesBuiltLastTime: -1,
     labs: Math.min(g_initialStateBoost * 10, 1000),
     labsBuilt: Math.min(g_initialStateBoost * 10, 1000),
-    research: Math.min(g_initialStateBoost * 10, 10000000),
-    researchBuilt: Math.min(g_initialStateBoost * 10, 10000000),
+    research: Math.min(g_initialStateBoost * 10, 1000000000),
+    researchBuilt: Math.min(g_initialStateBoost * 10, 1000000000),
 
     integratedCircuits: 0,
     integratedCircuitsBuilt: 0,
@@ -181,15 +184,19 @@ class ResearchOperator extends PurchaseOperator {
 
 class EventOperator extends ResearchOperator {
     constructor(name, prereqs, key, dependencies, cb, timecond) {
-        super(name, prereqs, prereqs, {}, key, dependencies, cb, timecond);
+        super(name, prereqs, {}, {}, key, dependencies, cb, timecond);
         this.type = OpType.event;
+    }
+    
+    permitted(state) {
+        return super.permitted(state) && super.prereqs(state);
     }
 }
 
 var buildTransistor = new PurchaseOperator("Build Transistor", {}, { transistors: 1 });
 var buildComputer = new PurchaseOperator("Build Computer", s => (s.R_INTEGRATED_CIRCUITS ? { integratedCircuits: 5 } : { transistors: 10 }), { computers: 1 });
-var buildFactory = new PurchaseOperator("Build Factory", { computers: 5 }, { factories: 1 });
-var buildLab = new PurchaseOperator("Build Research Lab", s => ({ computers: ~~(10 * (1.1 ** s.labsBuilt)) }), { labs: 1 });
+var buildFactory = new PurchaseOperator("Build Factory", s => ({ computers: ~~(5 * (1.3 ** s.factoriesBuilt)) }), { factories: 1 });
+var buildLab = new PurchaseOperator("Build Research Lab", s => ({ computers: ~~(10 * (1.5 ** s.labsBuilt)) }), { labs: 1 });
 
 var buildIntegratedCircuit = new PurchaseOperator("Build Integrated Circuit", {R_INTEGRATED_CIRCUITS: 1}, {}, { integratedCircuits: 1 });
 
@@ -202,7 +209,7 @@ allOperators.push(buildLab);
 allOperators.push(buildIntegratedCircuit); 
 
 
-var researchIntegratedCircuits = new ResearchOperator("Research Integrated Circuits", { research: 50 }, { research: 100 }, {}, 'R_INTEGRATED_CIRCUITS', []);
+var researchIntegratedCircuits = new ResearchOperator("Research Integrated Circuits", { research: 20 }, { research: 50 }, {}, 'R_INTEGRATED_CIRCUITS', []);
 var upgradeIntegratedCircuits1 = new ResearchOperator("Upgrade Integrated Circuits 1", { research: 100 }, { research: 200 }, {}, 'R_INTEGRATED_CIRCUITS_1', ["R_INTEGRATED_CIRCUITS"]);
 var upgradeIntegratedCircuits2 = new ResearchOperator("Upgrade Integrated Circuits 2", {}, { research: 500 }, {}, 'R_INTEGRATED_CIRCUITS_2', ["R_INTEGRATED_CIRCUITS_1"]);
 var upgradeIntegratedCircuits3 = new ResearchOperator("Upgrade Integrated Circuits 3", {}, { research: 1000 }, {}, 'R_INTEGRATED_CIRCUITS_3', ["R_INTEGRATED_CIRCUITS_2"]);
@@ -236,8 +243,8 @@ allOperators.push(researchLanguage3);
 allOperators.push(researchLanguage4);
 allOperators.push(researchLanguage5);
 
-var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factories: 10 }, { research: 100 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS']);
-var industrialRobotics2 = new ResearchOperator("Direct Drive Arm", {}, { research: 100000 }, {}, 'R_INDUSTRIAL_ROBOTICS_2', ['R_INDUSTRIAL_ROBOTICS_1']);
+var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factoriesBuilt: 5 }, { factoriesBuilt: 10, research: 100 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS']);
+var industrialRobotics2 = new ResearchOperator("Direct Drive Arm", {}, { research: 1000 }, {}, 'R_INDUSTRIAL_ROBOTICS_2', ['R_INDUSTRIAL_ROBOTICS_1']);
 var industrialRobotics3 = new ResearchOperator("ML Robots", {}, { research: 100000000 }, {}, 'R_INDUSTRIAL_ROBOTICS_3', ['R_INDUSTRIAL_ROBOTICS_2', 'R_ML_3']);
 allOperators.push(industrialRobotics1);
 allOperators.push(industrialRobotics2);
@@ -245,9 +252,9 @@ allOperators.push(industrialRobotics3);
 
 var machineLearning1 = new ResearchOperator("Machine Learning I", { research: 500 }, { research: 1000 }, {}, 'R_ML_1', []);
 var machineLearning2 = new ResearchOperator("Machine Learning II (backprop)", { labsBuilt: 5 }, { labsBuilt: 15, research: 5000 }, {}, 'R_ML_2', ['R_ML_1'], null, { 'E_AI_WINTER': 10000 / g_eventSpeedUp });
-var machineLearning3 = new ResearchOperator("Machine Learning III", {}, { research: 2000000 }, {}, 'R_ML_3', ['R_ML_2', 'R_GPU_3']);
-var machineLearning4 = new ResearchOperator("Machine Learning IV", {}, { research: 5000000 }, {}, 'R_ML_4', ['R_ML_3']);
-var machineLearning4 = new ResearchOperator("Machine Learning V", {}, { research: 75000000 }, {}, 'R_ML_5', ['R_ML_4', 'R_GPU_4']);
+var machineLearning3 = new ResearchOperator("Machine Learning III (CNNs)", {}, { research: 2000000 }, {}, 'R_ML_3', ['R_ML_2', 'R_GPU_3']);
+var machineLearning4 = new ResearchOperator("Machine Learning IV (Near Future)", {}, { research: 5000000 }, {}, 'R_ML_4', ['R_ML_3']);
+var machineLearning5 = new ResearchOperator("Machine Learning V (Far Future)", {}, { research: 75000000 }, {}, 'R_ML_5', ['R_ML_4', 'R_GPU_4']);
 allOperators.push(machineLearning1);
 allOperators.push(machineLearning2);
 allOperators.push(machineLearning3);
@@ -276,9 +283,10 @@ var gpu1 = new ResearchOperator("GPUs I", { research: 10000 }, { research: 15000
 var gpu2 = new ResearchOperator("GPUs II", { research: 100000 }, { research: 150000 }, {}, 'R_GPU_2', ['R_GPU_1']); // 2000's GPUs
 var gpu3 = new ResearchOperator("GPUs III", { research: 1000000 }, { research: 1500000 }, {}, 'R_GPU_3', ['R_GPU_2']); // modern GPUs & compute
 var gpu4 = new ResearchOperator("GPUs IV", { research: 10000000 }, { research: 50000000 }, {}, 'R_GPU_4', ['R_GPU_3']); // future GPUs
-var vr = new ResearchOperator("Virtual Reality", { research: 1000000 }, { research: 2000000 }, {}, 'R_VR', ['R_GPU_3'], handleResearchVirtualReality);
+var virtualReality = new ResearchOperator("Virtual Reality", { research: 1000000 }, { research: 2000000 }, {}, 'R_VR', ['R_GPU_3'], handleResearchVirtualReality);
+var augmentedReality = new ResearchOperator("Augmented Reality", { }, { research: 10000000 }, {}, 'R_AR', ['R_VR'], handleAddPopularityFactory(5));
 
-var iot = new ResearchOperator("", { research: 200 }, { research: 400 }, {}, 'R_CHAT', ['R_GRAPHICS_0', 'R_NETWORKING_2'], handleAddPopularityFactory(1));
+var iot = new ResearchOperator("Internet of Things", { research: 1000000 }, { research: 10000000 }, {}, 'R_IOT', ['R_ML_3', 'R_NETWORKING_2'], handleAddPopularityFactory(5));
 
 allOperators.push(graphics0);
 allOperators.push(graphics1);
@@ -301,7 +309,10 @@ allOperators.push(gpu1);
 allOperators.push(gpu2);
 allOperators.push(gpu3);
 allOperators.push(gpu4);
-allOperators.push(vr);
+allOperators.push(virtualReality);
+allOperators.push(augmentedReality);
+
+allOperators.push(iot);
 
 function handleAddPopularityFactory(n) {
     return state => {
@@ -369,6 +380,11 @@ function handlePersonalComputing(state) {
     state.popularity += computePopularityDeltaScale(g_currentState, 2);
 }
 
+var eventReeducation = new EventOperator("Reeducation Available", { unemployment: 10000 }, 'E_REEDUCATION_AVAILABLE', [], () => showNotification('E_REEDUCATION_AVAILABLE'), { });
+var researchReeducation = new ResearchOperator("Reeducation", {}, { research: 50000 }, {}, 'R_REEDUCATION', ['E_REEDUCATION_AVAILABLE']);
+allOperators.push(eventReeducation);
+allOperators.push(researchReeducation);
+
 //-----------------------------------------------------------------------------
 // User Interface
 //-----------------------------------------------------------------------------
@@ -376,12 +392,15 @@ g_statusUi = $("<h1></h1>");
 g_debugStatusUi = $("<h1 style='font-size: 20px'></h1>");
 g_computeUnitSliderHost = $("#computeUnitSliderHost");
 g_transistorsVsComputersSlider = $("#computeUnitSlider");
+g_researchVsReeducationSliderHost = $("#reeducationSliderHost");
+g_researchVsReeducationSlider = $("#reeducationSlider");
 
 function setupInterface() {
     $('.notification-template').hide();
     $('#status-host').append(g_statusUi);
     $('#debug-status-host').append(g_debugStatusUi);
     g_computeUnitSliderHost.hide();
+    g_researchVsReeducationSliderHost.hide();
 
     for (let operator of allOperators) {
         var button = $("<button>");
@@ -398,13 +417,13 @@ function updateInterface() {
     g_debugStatusUi.text(json);
 
     var text = [
-        [~~(g_currentState.transistors + g_currentState.integratedCircuits) + " Units", true],
-        [~~g_currentState.computers + " Computers", g_currentState.computersBuilt > 0],
-        [~~g_currentState.factories + " Factories", g_currentState.factoriesBuilt > 0],
-        [~~g_currentState.labs + " Labs", g_currentState.labsBuilt > 0],
-        [~~g_currentState.research + " Research", g_currentState.labsBuilt > 0],
-        [~~g_currentState.popularity + " Popularity", true],
-        [~~g_currentState.unemployment + " Unemployment", true],
+        [Math.floor(g_currentState.transistors + g_currentState.integratedCircuits) + " Units", true],
+        [Math.floor(g_currentState.computers) + " Computers", g_currentState.computersBuilt > 0],
+        [Math.floor(g_currentState.factories) + " Factories", g_currentState.factoriesBuilt > 0],
+        [Math.floor(g_currentState.labs) + " Labs", g_currentState.labsBuilt > 0],
+        [Math.floor(g_currentState.research) + " Research", g_currentState.labsBuilt > 0],
+        [Math.floor(g_currentState.popularity) + " Popularity", true],
+        [Math.floor(g_currentState.unemployment) + " Unemployment", true],
     ].filter(([t, ok]) => ok).map(([t, ok]) => t).join("<br/>")
     g_statusUi.html(text)
 
@@ -424,6 +443,14 @@ function updateInterface() {
         var opdesc = operator.description(g_currentState);
         if (opdesc) opcontent += "<br/>(" + opdesc + ")";
         operator.button.html(opcontent);
+    }
+    
+    if (isResearched('R_COMPUTERS_MASS_PRODUCED')) {
+        g_computeUnitSliderHost.show();
+    }
+
+    if (isResearched('R_REEDUCATION')) {
+        g_researchVsReeducationSliderHost.show();
     }
 }
 
@@ -456,17 +483,11 @@ function handleOperatorClicked(operator) {
 
         // HACK: Rapidly building factories increases unemployment.
         if (operator === buildFactory) {
-            const now = +(new Date());
-            const timeSinceLast = now - g_currentState.factoriesBuiltLastTime;
-            const unemploymentDeltaMultiplier = researchReward('R_INDUSTRIAL_ROBOTICS_', [10, 20, 30], 0);
-            const unemploymentChange = unemploymentDeltaMultiplier * clamp((10000 - timeSinceLast) / 10000, 0, 1);
+            // const now = +(new Date());
+            // const timeSinceLast = now - g_currentState.factoriesBuiltLastTime;
+            const unemploymentDeltaMultiplier = researchReward('R_INDUSTRIAL_ROBOTICS_', [5, 30, 500], 0);
+            const unemploymentChange = 10 * unemploymentDeltaMultiplier * (1.04 ** g_currentState.factoriesBuilt);
             g_currentState.unemployment += unemploymentChange;
-            g_currentState.factoriesBuiltLastTime = now;
-        }
-
-        // HACK: Researching computersMassProduced shows compute units vs computers production slider
-        if (operator === computersMassProduced) {
-            g_computeUnitSliderHost.show();
         }
 
         // HACK: Building research lab decreases unemployment by 1
@@ -539,24 +560,31 @@ function backgroundTick() {
 
         var mouseMultiplier = isResearched('R_MOUSE') ? 1.1 : 1;
 
-        var dresearch = g_currentState.labs * backgroundIntervalSeconds * icUpgradeMultiplier * mouseMultiplier * g_speedUp;
-        g_currentState.research += dresearch;
-        g_currentState.researchBuilt += dresearch;
+        var dresearchbase = g_currentState.labs * backgroundIntervalSeconds * icUpgradeMultiplier * mouseMultiplier * g_speedUp;
+        var percentToReeducation = (~~(g_researchVsReeducationSlider.val()) / 100);
+        
+        var dresearchspent = Math.min(2 * dresearchbase * percentToReeducation, g_currentState.research)
+
+        g_currentState.research += dresearchbase - dresearchspent;
+        g_currentState.researchBuilt += dresearchbase - dresearchspent;
+        
+        var dunemployment = Math.max(0.125 * dresearchspent, 0);
+        g_currentState.unemployment -= dunemployment;
     }
 
     for (var i = 0; i < g_speedUp; i++) {
         if (g_currentState.unemployment > 0) {
-            g_currentState.unemployment -= Math.log10(g_currentState.unemployment + 1) * backgroundIntervalSeconds;
+            g_currentState.unemployment -= 0.1 * Math.pow(g_currentState.unemployment + 1, 0.5) * backgroundIntervalSeconds;
             g_currentState.unemployment = clamp(g_currentState.unemployment, 0, Infinity);
         }
 
-        if (g_currentState.unemployment > 1000) {
-            let popularityLost = computePopularityDeltaScale(g_currentState, 0.1) * backgroundIntervalSeconds;
+        if (g_currentState.unemployment > 10000) {
+            let popularityLost = computePopularityDeltaScale(g_currentState, 0.03) * backgroundIntervalSeconds;
             g_currentState.popularity -= popularityLost;
             g_currentState.popularityLostToUnemployment += popularityLost;
         }
 
-        if (g_currentState.unemployment < 500) {
+        if (g_currentState.unemployment < 7500) {
             let popularityRecovered = computePopularityDeltaScale(g_currentState, 0.05) * backgroundIntervalSeconds;
             popularityRecovered = Math.min(
                 popularityRecovered,
