@@ -40,12 +40,16 @@ const InitialState = {
 
     unemployment: 0.0,
     unemployedAndEducated: 0.0,
-    surveillanceEnabled: -1,    
+    surveillanceEnabled: -1,
+    
+    robotTaxFactoryMultiplier: 1,
 
     aiWinterPopularityThreshold: Infinity,
     activeEvents: {},
 
     R_INTEGRATED_CIRCUITS: 0,
+    
+    gameOver: 0
 };
 
 let OpType = {
@@ -227,6 +231,18 @@ class EventOperator extends ResearchOperator {
         return super.permitted(state) && super.prereqs(state);
     }
 }
+class UnemploymentEventOperator extends EventOperator {
+    constructor(name, prereqs, key, dependencies, cb, timecond, popularityProportion) {
+        super(name, prereqs, key, dependencies, cb, timecond);
+        this.type = OpType.event;
+        this.popularityProportion = popularityProportion;
+    }
+    
+    permitted(state) {
+        const totalPop = state.popularityLostToUnemployment + state.popularity
+        return state.popularityLostToUnemployment >= state.popularity * this.popularityProportion && super.permitted(state) && super.prereqs(state);
+    }
+}
 
 var lerp1 = (val, min, max, rangemin, rangemax) => ((Math.max(Math.min(val, max), min) - min) / (max - min)) * (rangemax - rangemin) + rangemin;
 var lerp2 = (val, min, max, rangemin, rangemax) => Math.pow((Math.max(Math.min(val, max), min) - min) / (max - min), 2) * (rangemax - rangemin) + rangemin;
@@ -350,7 +366,7 @@ allOperators.push(machineLearning5);
 var eventAlphago = new EventOperator("AI wins in Go against top-ranked player in the world", { }, 'E_ALPHAGO', ['R_ML_4'], handleAlphago, { 'R_ML_4': 30000 / g_eventSpeedUp });
 function handleAlphago(state) {
     showNotification('E_ALPHAGO')
-    handleAddPopularityFactory(state, 2);
+    handleAddPopularityFactory(state, 3);
 }
 
 var eventMLFrameworks = new EventOperator("Machine learning frameworks", { }, 'E_ML_FRAMEWORKS', ['R_ML_4', 'R_LANGUAGE_5'], handleAlphago, { 'R_ML_4': 15000 / g_eventSpeedUp });
@@ -519,6 +535,36 @@ allOperators.push(researchWelfare4);
 allOperators.push(researchCollegeGrants2);
 allOperators.push(researchTimeSpeedup1);
 
+var unemployment25Pct = new UnemploymentEventOperator("Unemployment Warning", { }, 'E_UNEMPLOYMENT_WARNING', ['E_REEDUCATION_AVAILABLE'], handleUnemployment25Pct, { }, .25);
+allOperators.push(unemployment25Pct);
+function handleUnemployment25Pct(state) {
+    showNotification('E_UNEMPLOYMENT_WARNING');
+}
+
+var unemployment50Pct = new UnemploymentEventOperator("Unemployment Robot Tax", { }, 'E_ROBOT_TAX', ['E_REEDUCATION_AVAILABLE'], handleUnemployment50Pct, { }, .5);
+function handleUnemployment50Pct(state) {
+    showNotification('E_ROBOT_TAX');
+    state.robotTaxFactoryMultiplier = .5;
+}
+allOperators.push(unemployment50Pct);
+
+var unemployment75Pct = new UnemploymentEventOperator("Unemployment Riots", { }, 'E_RIOTS', ['E_REEDUCATION_AVAILABLE'], handleUnemployment75Pct, { }, .75);
+function handleUnemployment75Pct(state) {
+    showNotification('E_RIOTS');
+    state.factories /= 4;
+    state.labs /= 2;
+}
+allOperators.push(unemployment75Pct);
+
+var unemploymentLose = new UnemploymentEventOperator("Lose", { }, 'E_LOSE', ['E_REEDUCATION_AVAILABLE'], handleUnemploymentLose, { }, 1);
+function handleUnemploymentLose(state) {
+    showNotification('E_LOSE');
+    state.factories = 0;
+    state.labs = 0;
+    state.gameOver = 1;
+}
+allOperators.push(unemploymentLose);
+
 function dumpGraph() {
     const nodes = [];
     const edges = [];
@@ -683,6 +729,10 @@ function handleOperatorClicked(operator) {
 let backgroundIntervalSeconds = 0.1;
 function backgroundTick() {
     g_currentState = { ...g_currentState };
+    
+    if (g_currentState.gameOver)
+        return;
+    
     g_speedUp = g_debugSpeedUp;
     if (isResearched("R_SPEED_UP_GAME_TIME_1")) {
         g_speedUp *= 10;
@@ -696,7 +746,7 @@ function backgroundTick() {
     } else {
         var roboticsMultiplier = researchReward('R_INDUSTRIAL_ROBOTICS_', [2, 5, 10], 1);
         var mlPower = researchReward('R_ML_', [2, 3, 5, 8, 11], 1);
-        console.log('ml power', roboticsMultiplier, mlPower, roboticsMultiplier ** mlPower)
+        // console.log('ml power', roboticsMultiplier, mlPower, roboticsMultiplier ** mlPower)
 
         var percentComputerEffort = ~~(g_transistorsVsComputersSlider.val()) / 100;
         var percentTransistorEffort = 1 - percentComputerEffort;
@@ -705,7 +755,9 @@ function backgroundTick() {
 
         var welfareMultiplier = researchReward('R_WELFARE_', [0.5, 0.5 / 20, 0.5 / (20 * 5), 0.5 / (20 * 5 * 2)], 1);
         
-        const workUnitsTransformed = surveillanceMultiplier * welfareMultiplier * ((roboticsMultiplier) ** mlPower) * workUnitsBase;
+        var robotTaxFactoryMultiplier = g_currentState.robotTaxFactoryMultiplier || 1; //HACK to work with previous saves
+        
+        const workUnitsTransformed = surveillanceMultiplier * welfareMultiplier * ((roboticsMultiplier) ** mlPower) * workUnitsBase * robotTaxFactoryMultiplier;
 
         // Transistors
         var buildIcOps = workUnitsTransformed * percentTransistorEffort;
@@ -781,10 +833,10 @@ function backgroundTick() {
         }
     }
 
-    if (isResearched("R_ACCEPT_SURVEILLANCE") || isResearched("R_REJECT_SURVEILLANCE")) {
-        acceptSurveillance.button.remove();
-        rejectSurveillance.button.remove();
-    }
+    // if (isResearched("R_ACCEPT_SURVEILLANCE") || isResearched("R_REJECT_SURVEILLANCE")) {
+    //     acceptSurveillance.button.remove();
+    //     rejectSurveillance.button.remove();
+    // }
 
     updateInterface();
 
