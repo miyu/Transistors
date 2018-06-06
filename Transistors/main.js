@@ -282,7 +282,7 @@ allOperators.push(buildIntegratedCircuit);
 
 
 var researchIntegratedCircuits = new ResearchOperator("Research Integrated Circuits", { research: 20 }, { research: 50 }, {}, 'R_INTEGRATED_CIRCUITS', []);
-var upgradeIntegratedCircuits1 = new ResearchOperator("Upgrade Integrated Circuits 1", { research: 100 }, { research: 200 }, {}, 'R_INTEGRATED_CIRCUITS_1', ["R_INTEGRATED_CIRCUITS"]);
+var upgradeIntegratedCircuits1 = new ResearchOperator("Upgrade Integrated Circuits", { research: 100 }, { research: 200 }, {}, 'R_INTEGRATED_CIRCUITS_1', ["R_INTEGRATED_CIRCUITS"]);
 var upgradeIntegratedCircuits2 = new ResearchOperator("Upgrade Integrated Circuits 2", {}, { research: 500 }, {}, 'R_INTEGRATED_CIRCUITS_2', ["R_INTEGRATED_CIRCUITS_1"]);
 var upgradeIntegratedCircuits3 = new ResearchOperator("Upgrade Integrated Circuits 3", {}, { research: 1000 }, {}, 'R_INTEGRATED_CIRCUITS_3', ["R_INTEGRATED_CIRCUITS_2"]);
 var upgradeIntegratedCircuits4 = new ResearchOperator("Upgrade Integrated Circuits 4", {}, { research: 2000 }, {}, 'R_INTEGRATED_CIRCUITS_4', ["R_INTEGRATED_CIRCUITS_3"]);
@@ -316,11 +316,11 @@ allOperators.push(upgradeIntegratedCircuits14);
 allOperators.push(upgradeIntegratedCircuits15);
 allOperators.push(upgradeIntegratedCircuits16);
 
-var researchLanguage1 = new ResearchOperator("Research Language 1", { labs: 5 }, { research: 100 }, {}, 'R_LANGUAGE_1', []); // ASM
-var researchLanguage2 = new ResearchOperator("Research Language 2", {}, { research: 1000 }, {}, 'R_LANGUAGE_2', ['R_LANGUAGE_1']); // Low-level
-var researchLanguage3 = new ResearchOperator("Research Language 3", {}, { research: 10000 }, {}, 'R_LANGUAGE_3', ['R_LANGUAGE_2']); // C
-var researchLanguage4 = new ResearchOperator("Research Language 4", {}, { research: 100000 }, {}, 'R_LANGUAGE_4', ['R_LANGUAGE_3']); 
-var researchLanguage5 = new ResearchOperator("Research Language 5", {}, { research: 1000000 }, {}, 'R_LANGUAGE_5', ['R_LANGUAGE_4']); // Python
+var researchLanguage1 = new ResearchOperator("Assembly Language", { labs: 5 }, { research: 100 }, {}, 'R_LANGUAGE_1', []); // ASM
+var researchLanguage2 = new ResearchOperator("Basic Programming Languages", {}, { research: 1000 }, {}, 'R_LANGUAGE_2', ['R_LANGUAGE_1']); // Low-level
+var researchLanguage3 = new ResearchOperator("Low-level Programming Languages", {}, { research: 10000 }, {}, 'R_LANGUAGE_3', ['R_LANGUAGE_2']); // C
+var researchLanguage4 = new ResearchOperator("High-level Programming Languages", {}, { research: 100000 }, {}, 'R_LANGUAGE_4', ['R_LANGUAGE_3']); 
+var researchLanguage5 = new ResearchOperator("General-purpose Scripting Languages", {}, { research: 1000000 }, {}, 'R_LANGUAGE_5', ['R_LANGUAGE_4']); // Python
 allOperators.push(researchLanguage1);
 allOperators.push(researchLanguage2);
 allOperators.push(researchLanguage3);
@@ -329,18 +329,18 @@ allOperators.push(researchLanguage5);
 
 var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factoriesBuilt: 5 }, { factoriesBuilt: 10, research: 100 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS']);
 var industrialRobotics2 = new ResearchOperator("Direct Drive Arm", {}, { research: 1000 }, {}, 'R_INDUSTRIAL_ROBOTICS_2', ['R_INDUSTRIAL_ROBOTICS_1']);
-var industrialRobotics3 = new ResearchOperator("ML Robots", { research: 0.5 * billion }, { research: 1 * billion }, {}, 'R_INDUSTRIAL_ROBOTICS_3', ['R_INDUSTRIAL_ROBOTICS_2', 'R_ML_3']);
+var industrialRobotics3 = new ResearchOperator("Machine-Learning-Based Robots", { research: 0.5 * billion }, { research: 1 * billion }, {}, 'R_INDUSTRIAL_ROBOTICS_3', ['R_INDUSTRIAL_ROBOTICS_2', 'R_ML_3']);
 var industrialRobotics4 = new ResearchOperator("Self-Replication", { research: 1 * billion, R_COLLEGE_GRANTS_ADULTS: 1 }, { research: 5 * billion }, {}, 'R_INDUSTRIAL_ROBOTICS_4', ['R_INDUSTRIAL_ROBOTICS_3', 'R_ML_5']);
 allOperators.push(industrialRobotics1);
 allOperators.push(industrialRobotics2);
 allOperators.push(industrialRobotics3);
 allOperators.push(industrialRobotics4);
 
-var machineLearning1 = new ResearchOperator("Machine Learning I", { research: 500 }, { research: 1000 }, {}, 'R_ML_1', []);
-var machineLearning2 = new ResearchOperator("Machine Learning II (backprop)", { labsBuilt: 5 }, { labsBuilt: 15, research: 5000 }, {}, 'R_ML_2', ['R_ML_1'], null, { 'E_AI_WINTER': 10000 / g_eventSpeedUp });
-var machineLearning3 = new ResearchOperator("Machine Learning III (CNNs)", {}, { research: 2 * million }, {}, 'R_ML_3', ['R_ML_2', 'R_GPU_3']);
-var machineLearning4 = new ResearchOperator("Machine Learning IV (Near Future)", {}, { research: 50 * million }, {}, 'R_ML_4', ['R_ML_3']);
-var machineLearning5 = new ResearchOperator("Machine Learning V (Far Future)", {},  { research: 500 * million }, {}, 'R_ML_5', ['R_ML_4', 'R_GPU_4']);
+var machineLearning1 = new ResearchOperator("Machine Learning: Neural Networks", { research: 500 }, { research: 1000 }, {}, 'R_ML_1', []);
+var machineLearning2 = new ResearchOperator("Machine Learning: Backpropagation", { labsBuilt: 5 }, { labsBuilt: 15, research: 5000 }, {}, 'R_ML_2', ['R_ML_1'], null, { 'E_AI_WINTER': 10000 / g_eventSpeedUp });
+var machineLearning3 = new ResearchOperator("Machine Learning: Support Vector Machines", {}, { research: 2 * million }, {}, 'R_ML_3', ['R_ML_2', 'R_GPU_3']);
+var machineLearning4 = new ResearchOperator("Machine Learning IV: Long-Short Term Memory Recurrent Neural Networks", {}, { research: 50 * million }, {}, 'R_ML_4', ['R_ML_3']);
+var machineLearning5 = new ResearchOperator("Machine Learning V: (Future)", {},  { research: 500 * million }, {}, 'R_ML_5', ['R_ML_4', 'R_GPU_4']);
 allOperators.push(machineLearning1);
 allOperators.push(machineLearning2);
 allOperators.push(machineLearning3);
@@ -355,10 +355,10 @@ var graphicsFirstMice = new ResearchOperator("The Mouse", { research: 2000 }, { 
 var eventInventionOfMouse = new EventOperator("The Invention of the Mouse", { }, 'E_MOUSE_INVENTION', ['R_MOUSE'], () => showNotification('E_MOUSE_INVENTED'), { });
 var eventPersonalComputing = new EventOperator("Personal Computing", { }, 'E_PERSONAL_COMPUTING', ['E_MOUSE_INVENTION', 'R_COMPUTERS_MASS_PRODUCED'], handlePersonalComputing, { E_MOUSE_INVENTION: 10000 / g_eventSpeedUp });
 
-var research2DGames = new ResearchOperator("Research 2D Computer Games", { }, { research: 5000 }, {}, 'R_COMPUTER_GAMES_2D', ['E_PERSONAL_COMPUTING'], handleResearch2DGames);
-var gpu1 = new ResearchOperator("GPUs I", { research: 10000 }, { research: 15000  }, {}, 'R_GPU_1', ['R_COMPUTER_GAMES_2D']); //90s GPUs
+var research2DGames = new ResearchOperator("2D Computer Games", { }, { research: 5000 }, {}, 'R_COMPUTER_GAMES_2D', ['E_PERSONAL_COMPUTING'], handleResearch2DGames);
+var gpu1 = new ResearchOperator("GPUs", { research: 10000 }, { research: 15000  }, {}, 'R_GPU_1', ['R_COMPUTER_GAMES_2D']); //90s GPUs
 
-var research3DGames = new ResearchOperator("Research 3D Computer Games", { research: 10000 }, { research: 15000 }, {}, 'R_COMPUTER_GAMES_3D', ['R_COMPUTER_GAMES_2D', 'R_GRAPHICS_2'], handleResearch3DGames);
+var research3DGames = new ResearchOperator("3D Computer Games", { research: 10000 }, { research: 15000 }, {}, 'R_COMPUTER_GAMES_3D', ['R_COMPUTER_GAMES_2D', 'R_GRAPHICS_2'], handleResearch3DGames);
 var gpu2 = new ResearchOperator("GPUs II", { research: 100 * thousand }, { research: 150 * thousand }, {}, 'R_GPU_2', ['R_GPU_1', 'R_COMPUTER_GAMES_3D']); // 2000's GPUs
 var gpu3 = new ResearchOperator("GPUs III", { research: 1 * million }, { research: 1.5 * million }, {}, 'R_GPU_3', ['R_GPU_2']); // modern GPUs & compute
 var gpu4 = new ResearchOperator("GPUs IV", { research: 100 * million }, { research: 200 * million }, {}, 'R_GPU_4', ['R_GPU_3']); // future GPUs
@@ -466,7 +466,7 @@ allOperators.push(eventFirstIntegratedCircuit);
 
 function handlePersonalComputing(state) {
     showNotification('E_PERSONAL_COMPUTING');
-    state.popularity += computePopularityDeltaScale(g_currentState, 2);
+    state.popularity += computePopularityDeltaScale(g_currentState, 3);
 }
 
 var eventReeducation = new EventOperator("Reeducation Available", { unemployment: 10000 }, 'E_REEDUCATION_AVAILABLE', [], () => showNotification('E_REEDUCATION_AVAILABLE'), { });
@@ -474,8 +474,8 @@ var researchReeducation = new ResearchOperator("Reeducation", {}, { research: 50
 allOperators.push(eventReeducation);
 allOperators.push(researchReeducation);
 
-var eventWelfare = new EventOperator("Welfare Available", { unemployment: 10000 }, 'E_WELFARE_AVAILABLE', [], () => showNotification('E_WELFARE_AVAILABLE'), { R_REEDUCATION: 5000 / g_eventSpeedUp });
-var researchWelfare1 = new ResearchOperator("Welfare I", { unemployment: 10000 }, { integratedCircuits: 1 * million }, {}, 'R_WELFARE_1', ['E_WELFARE_AVAILABLE'], null, {E_WELFARE_AVAILABLE: 10000 / g_eventSpeedUp});
+var eventWelfare = new EventOperator("Welfare Available", { unemployment: 10000 }, 'E_WELFARE_AVAILABLE', [], () => showNotification('E_WELFARE_AVAILABLE'), { R_REEDUCATION: 15000 / g_eventSpeedUp });
+var researchWelfare1 = new ResearchOperator("Welfare I", { unemployment: 10000 }, { integratedCircuits: 1 * million }, {}, 'R_WELFARE_1', ['E_WELFARE_AVAILABLE'], null, {/*E_WELFARE_AVAILABLE: 10000 / g_eventSpeedUp*/});
 var researchWelfare2 = new ResearchOperator("Welfare II", { unemployment: Welfare1Threshold }, { integratedCircuits: 1 * quadrillion }, {}, 'R_WELFARE_2', ['R_WELFARE_1'], null, {R_WELFARE_1: 10000 / g_eventSpeedUp});
 var researchWelfare3 = new ResearchOperator("Welfare III", { unemployment: Welfare2Threshold / 100 }, { integratedCircuits: 10 * quadrillion }, {}, 'R_WELFARE_3', ['R_WELFARE_2'], null, {R_WELFARE_2: 10000 / g_eventSpeedUp});
 var researchWelfare4 = new ResearchOperator("Welfare IV (Automation)", { unemployment: Welfare3Threshold / 100 }, { research: 1 * trillion }, {}, 'R_WELFARE_4', ['R_WELFARE_3'], null, {R_WELFARE_3: 10000 / g_eventSpeedUp});
@@ -745,7 +745,7 @@ function backgroundTick() {
         }
 
         if (g_currentState.unemployment < unemploymentTooLowThreshold) {
-            let popularityRecovered = computePopularityDeltaScale(g_currentState, 0.05) * backgroundIntervalSeconds;
+            let popularityRecovered = computePopularityDeltaScale(g_currentState, 0.005) * backgroundIntervalSeconds;
             popularityRecovered = Math.min(
                 popularityRecovered,
             g_currentState.popularityLostToUnemployment);
