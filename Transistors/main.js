@@ -669,6 +669,9 @@ function setupInterface() {
         operator.p = p;
         operator.alts = [];
     }
+    
+    $("#control-host").append(g_computeUnitSliderHost);
+    $("#control-host").append(g_researchVsReeducationSliderHost);
 }
 
 let g_lastLines = []
