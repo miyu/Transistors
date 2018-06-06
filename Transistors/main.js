@@ -238,9 +238,13 @@ class UnemploymentEventOperator extends EventOperator {
         this.popularityProportion = popularityProportion;
     }
     
+    prereqs(state) {
+        return super.prereqs(state) && state.popularityLostToUnemployment >= state.popularity;
+    }
+    
     permitted(state) {
         const totalPop = state.popularityLostToUnemployment + state.popularity
-        return state.popularityLostToUnemployment >= state.popularity * this.popularityProportion && super.permitted(state) && super.prereqs(state);
+        return state.popularityLostToUnemployment >= state.popularity * this.popularityProportion && super.permitted(state);//&& super.prereqs(state)
     }
 }
 
@@ -363,16 +367,30 @@ allOperators.push(machineLearning3);
 allOperators.push(machineLearning4);
 allOperators.push(machineLearning5);
 
+var selfDrivingCars = new ResearchOperator("Self-Driving Cars", {research: 200 * million}, { research: 500 * million }, {}, 'R_SELF_DRIVING_CARS', ['R_ML_4'], handleAddPopularityFactory(5));
+allOperators.push(selfDrivingCars);
+
+var virtualAssistants = new ResearchOperator("Virtual Assistants", {research: 75 * million}, { research: 100 * million }, {}, 'R_VIRTUAL_ASSISTANTS', ['R_ML_4'], handleAddPopularityFactory(5));
+var personalAssitantRobots = new ResearchOperator("Personal Assistant Robots", {},  { research: 500 * million }, {}, 'R_PERSONAL_ASSISTANT_ROBOTS', ['R_VIRTUAL_ASSISTANTS'], handleAddPopularityFactory(8));
+allOperators.push(virtualAssistants);
+allOperators.push(personalAssitantRobots);
+
+var computerImplants = new ResearchOperator("Computer Implants", {research: 25 * billion},  { research: 50 * billion }, {}, 'R_COMPUTER_IMPLANTS', ['R_ML_5'], handleAddPopularityFactory(8));
+allOperators.push(computerImplants);
+var neuralVR = new ResearchOperator("Neural Virtual Reality", {research: 100 * trillion},  { research: 500 * trillion }, {}, 'R_NEURAL_VR', ['R_COMPUTER_IMPLANTS', 'R_VR'], handleAddPopularityFactory(10));
+allOperators.push(neuralVR);
+
+
 var eventAlphago = new EventOperator("AI wins in Go against top-ranked player in the world", { }, 'E_ALPHAGO', ['R_ML_4'], handleAlphago, { 'R_ML_4': 30000 / g_eventSpeedUp });
 function handleAlphago(state) {
     showNotification('E_ALPHAGO')
-    handleAddPopularityFactory(state, 3);
+    handleAddPopularityFactory(3)(state);
 }
 
 var eventMLFrameworks = new EventOperator("Machine learning frameworks", { }, 'E_ML_FRAMEWORKS', ['R_ML_4', 'R_LANGUAGE_5'], handleAlphago, { 'R_ML_4': 15000 / g_eventSpeedUp });
 function handleAlphago(state) {
     showNotification('E_ML_FRAMEWORKS')
-    handleAddPopularityFactory(state, 5);
+    handleAddPopularityFactory(5)(state);
 }
 allOperators.push(eventAlphago);
 allOperators.push(eventMLFrameworks);
@@ -438,7 +456,7 @@ var surveillanceRevealedEvent = new EventOperator("Government Surveillance", {},
 allOperators.push(surveillanceRevealedEvent)
 function handleSurveillanceRevealed(state) {
     showNotification('E_GVT_SURVEILLANCE_REVEALED');
-    state.popularity -= computePopularityDeltaScale(g_currentState, 10);
+    state.popularity -= computePopularityDeltaScale(g_currentState, 8);
 }
 
 function handleAddPopularityFactory(n) {
