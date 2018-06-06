@@ -690,7 +690,7 @@ function backgroundTick() {
         }
 
         if (g_currentState.unemployment < unemploymentTooLowThreshold) {
-            let popularityRecovered = computePopularityDeltaScale(g_currentState, 0.05) * backgroundIntervalSeconds;
+            let popularityRecovered = computePopularityDeltaScale(g_currentState, 0.005) * backgroundIntervalSeconds;
             popularityRecovered = Math.min(
                 popularityRecovered,
             g_currentState.popularityLostToUnemployment);
