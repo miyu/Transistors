@@ -4,10 +4,16 @@ $ = $;
 
 const clamp = (x, low, high) => Math.min(high, Math.max(low, x));
 
+const thousand = 1000;
+const million = thousand * thousand;
+const billion = thousand * million;
+const trillion = thousand * billion;
+const quadrillion = thousand * trillion;
+const quintillion = thousand * quadrillion;
 
 const g_speedUpEnabled = true;
-const g_speedUp = g_speedUpEnabled ? 2 : 1;
-const g_eventSpeedUp = g_speedUpEnabled ? 4 : 1;
+let g_speedUp = g_speedUpEnabled ? 2 : 1;
+let g_eventSpeedUp = g_speedUpEnabled ? 4 : 1;
 
 const g_initialStateBoost = window.location.search.includes("cheats") ? 100000000000 : 0;
 
@@ -30,11 +36,10 @@ const InitialState = {
     popularityLostToUnemployment: 0.0,
 
     unemployment: 0.0,
+    surveillanceEnabled: -1,    
 
     aiWinterPopularityThreshold: Infinity,
-    activeEvents: {},
-
-    R_INTEGRATED_CIRCUITS: 0,
+    activeEvents: {}
 };
 
 let OpType = {
@@ -42,6 +47,10 @@ let OpType = {
     research: 1,
     event: 2,
 }
+
+const Welfare1Threshold = 1 * million;
+const Welfare2Threshold = 100 * million;
+const Welfare3Threshold = 10 * billion;
 
 let g_currentState = { ...InitialState };
 
@@ -65,6 +74,23 @@ const currentComputeUnits = s => {
 const totalComputeUnits = s => {
     return s.transistorsBuilt + s.integratedCircuitsBuilt;
 };
+
+const formatNumber = (x, dec) => (Math.floor(x * (dec || 100)) / (dec || 100)).toLocaleString()
+
+function formatNumberMetricPrefix(n) {
+    if (n >= quintillion) {
+        return formatNumber(n / quintillion) + " Quintillion";
+    } else if (n >= quadrillion) {
+        return formatNumber(n / quadrillion) + " Quadrillion";
+    } else if (n >= trillion) {
+        return formatNumber(n / trillion) + " Trillion";
+    } else if (n >= billion) {
+        return formatNumber(n / billion) + " Billion";
+    } else if (n >= million) {
+        return formatNumber(n / million) + " Million";
+    }
+    return formatNumber(n, 1) + "";
+}
 
 class Operator {
     constructor(name) {
@@ -99,8 +125,8 @@ class PurchaseOperator extends Operator {
     }
 
     description(state) {
-        var from = Object.entries(this.costs(state)).map(([k, v]) => `${k}: ${v}`).join(", ");
-        var to = Object.entries(this.yields(state)).map(([k, v]) => `${k}: ${v}`).join(", ");
+        var from = Object.entries(this.costs(state)).map(([k, v]) => `${k}: ${formatNumberMetricPrefix(v)}`).join(", ");
+        var to = Object.entries(this.yields(state)).map(([k, v]) => `${k}: ${formatNumberMetricPrefix(v)}`).join(", ");
         return from + " => " + to;
     }
 
@@ -193,8 +219,8 @@ class EventOperator extends ResearchOperator {
 
 var buildTransistor = new PurchaseOperator("Build Transistor", {}, { transistors: 1 });
 var buildComputer = new PurchaseOperator("Build Computer", s => (s.R_INTEGRATED_CIRCUITS ? { integratedCircuits: 5 } : { transistors: 10 }), { computers: 1 });
-var buildFactory = new PurchaseOperator("Build Factory", s => ({ computers: ~~(5 * (1.3 ** s.factoriesBuilt)) }), { factories: 1 });
-var buildLab = new PurchaseOperator("Build Research Lab", s => ({ computers: ~~(10 * (1.5 ** s.labsBuilt)) }), { labs: 1 });
+var buildFactory = new PurchaseOperator("Build Factory", s => ({ computers: Math.floor(5 * ((isResearched('R_INDUSTRIAL_ROBOTICS_3') ? 1.2 : 1.3) ** s.factoriesBuilt)) }), { factories: 1 });
+var buildLab = new PurchaseOperator("Build Research Lab", s => ({ computers: Math.floor(10 * ((isResearched('R_ACCEPT_SURVEILLANCE') ? 1.15 : 1.5) ** s.labsBuilt)) }), { labs: 1 });
 
 var buildIntegratedCircuit = new PurchaseOperator("Build Integrated Circuit", {R_INTEGRATED_CIRCUITS: 1}, {}, { integratedCircuits: 1 });
 
@@ -243,16 +269,16 @@ allOperators.push(researchLanguage5);
 
 var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factoriesBuilt: 5 }, { factoriesBuilt: 10, research: 100 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS']);
 var industrialRobotics2 = new ResearchOperator("Direct Drive Arm", {}, { research: 1000 }, {}, 'R_INDUSTRIAL_ROBOTICS_2', ['R_INDUSTRIAL_ROBOTICS_1']);
-var industrialRobotics3 = new ResearchOperator("ML Robots", {}, { research: 100000000 }, {}, 'R_INDUSTRIAL_ROBOTICS_3', ['R_INDUSTRIAL_ROBOTICS_2', 'R_ML_3']);
+var industrialRobotics3 = new ResearchOperator("ML Robots", { research: 0.5 * billion }, { research: 1 * billion }, {}, 'R_INDUSTRIAL_ROBOTICS_3', ['R_INDUSTRIAL_ROBOTICS_2', 'R_ML_3']);
 allOperators.push(industrialRobotics1);
 allOperators.push(industrialRobotics2);
 allOperators.push(industrialRobotics3);
 
 var machineLearning1 = new ResearchOperator("Machine Learning I", { research: 500 }, { research: 1000 }, {}, 'R_ML_1', []);
 var machineLearning2 = new ResearchOperator("Machine Learning II (backprop)", { labsBuilt: 5 }, { labsBuilt: 15, research: 5000 }, {}, 'R_ML_2', ['R_ML_1'], null, { 'E_AI_WINTER': 10000 / g_eventSpeedUp });
-var machineLearning3 = new ResearchOperator("Machine Learning III (CNNs)", {}, { research: 2000000 }, {}, 'R_ML_3', ['R_ML_2', 'R_GPU_3']);
-var machineLearning4 = new ResearchOperator("Machine Learning IV (Near Future)", {}, { research: 5000000 }, {}, 'R_ML_4', ['R_ML_3']);
-var machineLearning5 = new ResearchOperator("Machine Learning V (Far Future)", {}, { research: 75000000 }, {}, 'R_ML_5', ['R_ML_4', 'R_GPU_4']);
+var machineLearning3 = new ResearchOperator("Machine Learning III (CNNs)", {}, { research: 2 * million }, {}, 'R_ML_3', ['R_ML_2', 'R_GPU_3']);
+var machineLearning4 = new ResearchOperator("Machine Learning IV (Near Future)", {}, { research: 50 * million }, {}, 'R_ML_4', ['R_ML_3']);
+var machineLearning5 = new ResearchOperator("Machine Learning V (Far Future)", {},  { research: 500 * million }, {}, 'R_ML_5', ['R_ML_4', 'R_GPU_4']);
 allOperators.push(machineLearning1);
 allOperators.push(machineLearning2);
 allOperators.push(machineLearning3);
@@ -264,23 +290,16 @@ var graphics1 = new ResearchOperator("Graphical User Interfaces", { research: 10
 var graphics2 = new ResearchOperator("3D Graphics", {}, { research: 10000 }, {}, 'R_GRAPHICS_2', ['R_GRAPHICS_1']);
 var graphicsFirstMice = new ResearchOperator("The Mouse", { research: 2000 }, { research: 2500 }, {}, 'R_MOUSE', ['R_GRAPHICS_1']);
 
-var networking1 = new ResearchOperator("Networks", { research: 500 }, { research: 1000 }, {}, 'R_NETWORKING_1', ['R_LANGUAGE_1']);
-var networking2 = new ResearchOperator("The Internet", { research: 1000 }, { research: 1500 }, {}, 'R_NETWORKING_2', ['R_NETWORKING_1']);
-var email = new ResearchOperator("Email", { research: 100 }, { research: 200 }, {}, 'R_EMAIL', ['R_GRAPHICS_0', 'R_NETWORKING_2'], handleAddPopularityFactory(1));
-var instantMessaging = new ResearchOperator("Instant Messaging", { research: 200 }, { research: 400 }, {}, 'R_CHAT', ['R_GRAPHICS_0', 'R_NETWORKING_2'], handleAddPopularityFactory(1));
-
 var eventInventionOfMouse = new EventOperator("The Invention of the Mouse", { }, 'E_MOUSE_INVENTION', ['R_MOUSE'], () => showNotification('E_MOUSE_INVENTED'), { });
 var eventPersonalComputing = new EventOperator("Personal Computing", { }, 'E_PERSONAL_COMPUTING', ['E_MOUSE_INVENTION', 'R_COMPUTERS_MASS_PRODUCED'], handlePersonalComputing, { E_MOUSE_INVENTION: 10000 / g_eventSpeedUp });
 
-var browsers = new ResearchOperator("Web Browsers", { research: 1500 }, { research: 2500 }, {}, 'R_INTERNET', ['R_GRAPHICS_1', 'R_NETWORKING_2', 'E_PERSONAL_COMPUTING'], handleAddPopularityFactory(1));
-
 var research2DGames = new ResearchOperator("Research 2D Computer Games", { }, { research: 5000 }, {}, 'R_COMPUTER_GAMES_2D', ['E_PERSONAL_COMPUTING'], handleResearch2DGames);
-var research3DGames = new ResearchOperator("Research 3D Computer Games", { research: 10000 }, { research: 15000 }, {}, 'R_COMPUTER_GAMES_3D', ['R_COMPUTER_GAMES_2D', 'R_GRAPHICS_2'], handleResearch3DGames);
-
 var gpu1 = new ResearchOperator("GPUs I", { research: 10000 }, { research: 15000  }, {}, 'R_GPU_1', ['R_COMPUTER_GAMES_2D']); //90s GPUs
-var gpu2 = new ResearchOperator("GPUs II", { research: 100000 }, { research: 150000 }, {}, 'R_GPU_2', ['R_GPU_1']); // 2000's GPUs
-var gpu3 = new ResearchOperator("GPUs III", { research: 1000000 }, { research: 1500000 }, {}, 'R_GPU_3', ['R_GPU_2']); // modern GPUs & compute
-var gpu4 = new ResearchOperator("GPUs IV", { research: 10000000 }, { research: 50000000 }, {}, 'R_GPU_4', ['R_GPU_3']); // future GPUs
+
+var research3DGames = new ResearchOperator("Research 3D Computer Games", { research: 10000 }, { research: 15000 }, {}, 'R_COMPUTER_GAMES_3D', ['R_COMPUTER_GAMES_2D', 'R_GRAPHICS_2'], handleResearch3DGames);
+var gpu2 = new ResearchOperator("GPUs II", { research: 100 * thousand }, { research: 150 * thousand }, {}, 'R_GPU_2', ['R_GPU_1', 'R_COMPUTER_GAMES_3D']); // 2000's GPUs
+var gpu3 = new ResearchOperator("GPUs III", { research: 1 * million }, { research: 1.5 * million }, {}, 'R_GPU_3', ['R_GPU_2']); // modern GPUs & compute
+var gpu4 = new ResearchOperator("GPUs IV", { research: 100 * million }, { research: 200 * million }, {}, 'R_GPU_4', ['R_GPU_3']); // future GPUs
 var virtualReality = new ResearchOperator("Virtual Reality", { research: 1000000 }, { research: 2000000 }, {}, 'R_VR', ['R_GPU_3'], handleResearchVirtualReality);
 var augmentedReality = new ResearchOperator("Augmented Reality", { }, { research: 10000000 }, {}, 'R_AR', ['R_VR'], handleAddPopularityFactory(5));
 
@@ -291,15 +310,8 @@ allOperators.push(graphics1);
 allOperators.push(graphics2);
 allOperators.push(graphicsFirstMice);
 
-allOperators.push(networking1);
-allOperators.push(networking2);
-allOperators.push(email);
-allOperators.push(instantMessaging);
-
 allOperators.push(eventInventionOfMouse);
 allOperators.push(eventPersonalComputing);
-
-allOperators.push(browsers);
 
 allOperators.push(research2DGames);
 allOperators.push(research3DGames);
@@ -311,6 +323,23 @@ allOperators.push(virtualReality);
 allOperators.push(augmentedReality);
 
 allOperators.push(iot);
+
+var networking1 = new ResearchOperator("Networks", { research: 500 }, { research: 1000 }, {}, 'R_NETWORKING_1', ['R_LANGUAGE_1']);
+var networking2 = new ResearchOperator("The Internet", { research: 1000 }, { research: 1500 }, {}, 'R_NETWORKING_2', ['R_NETWORKING_1']);
+var email = new ResearchOperator("Email", { research: 100 }, { research: 200 }, {}, 'R_EMAIL', ['R_GRAPHICS_0', 'R_NETWORKING_2'], handleAddPopularityFactory(1));
+var instantMessaging = new ResearchOperator("Instant Messaging", { research: 200 }, { research: 400 }, {}, 'R_CHAT', ['R_GRAPHICS_0', 'R_NETWORKING_2'], handleAddPopularityFactory(1));
+var browsers = new ResearchOperator("Web Browsers", { research: 1500 }, { research: 2500 }, {}, 'R_BROWSERS', ['R_GRAPHICS_1', 'R_NETWORKING_2', 'E_PERSONAL_COMPUTING'], handleAddPopularityFactory(1));
+
+allOperators.push(networking1);
+allOperators.push(networking2);
+allOperators.push(email);
+allOperators.push(instantMessaging);
+allOperators.push(browsers);
+
+var acceptSurveillance = new ResearchOperator("Accept Government Surveillance", {}, {}, { surveillanceEnabled: 2 }, 'R_ACCEPT_SURVEILLANCE', ['R_EMAIL', 'R_CHAT', 'R_BROWSERS'], null, {  });
+var rejectSurveillance = new ResearchOperator("Reject Government Surveillance", {}, {}, { surveillanceEnabled: 1 }, 'R_REJECT_SURVEILLANCE', ['R_EMAIL', 'R_CHAT', 'R_BROWSERS'], null, { });
+allOperators.push(acceptSurveillance);
+allOperators.push(rejectSurveillance);
 
 function handleAddPopularityFactory(n) {
     return state => {
@@ -383,11 +412,43 @@ var researchReeducation = new ResearchOperator("Reeducation", {}, { research: 50
 allOperators.push(eventReeducation);
 allOperators.push(researchReeducation);
 
+var eventWelfare = new EventOperator("Welfare Available", { unemployment: 10000 }, 'E_WELFARE_AVAILABLE', [], () => showNotification('E_WELFARE_AVAILABLE'), { R_REEDUCATION: 5000 / g_eventSpeedUp });
+var researchWelfare1 = new ResearchOperator("Welfare I", { unemployment: 10000 }, { integratedCircuits: 10 * billion }, {}, 'R_WELFARE_1', ['E_WELFARE_AVAILABLE'], null, {E_WELFARE_AVAILABLE: 10000 / g_eventSpeedUp});
+var researchWelfare2 = new ResearchOperator("Welfare II", { unemployment: Welfare1Threshold }, { integratedCircuits: 1 * quadrillion }, {}, 'R_WELFARE_2', ['R_WELFARE_1'], null, {R_WELFARE_1: 10000 / g_eventSpeedUp});
+var researchWelfare3 = new ResearchOperator("Welfare III", { unemployment: Welfare2Threshold }, { integratedCircuits: 1 * quintillion }, {}, 'R_WELFARE_3', ['R_WELFARE_2'], null, {R_WELFARE_2: 10000 / g_eventSpeedUp});
+allOperators.push(eventWelfare);
+allOperators.push(researchWelfare1);
+allOperators.push(researchWelfare2);
+allOperators.push(researchWelfare3);
+
+
+function dumpGraph() {
+    const nodes = [];
+    const edges = [];
+    for (let op of allOperators) {
+        if (!(op instanceof ResearchOperator)) continue;
+        nodes.push(`${op.key} [label="${op.name}", xlabel="${op.description(g_currentState)}"];`);
+
+        for (let dep of op.dependencies) {
+            edges.push(`${dep} -> ${op.key}`);
+        }
+    }
+
+    const nl = '\r\n';
+    console.log(
+        "digraph g {" + nl +
+        "    forcelabels=true;" + nl +
+        nodes.map(x => '    ' + x).join(nl) + nl +
+        edges.map(x => '    ' + x).join(nl) + nl +
+        "}");
+}
+
 //-----------------------------------------------------------------------------
 // User Interface
 //-----------------------------------------------------------------------------
-g_statusUi = $("<h1></h1>");
-g_debugStatusUi = $("<h1 style='font-size: 20px'></h1>");
+g_statusUiAllTime = $("<h1></h1>");
+g_statusUiInventory = $("<p></p>");
+g_debugStatusUi = $("<h1 style='font-size: 8px'></h1>");
 g_computeUnitSliderHost = $("#computeUnitSliderHost");
 g_transistorsVsComputersSlider = $("#computeUnitSlider");
 g_researchVsReeducationSliderHost = $("#reeducationSliderHost");
@@ -395,7 +456,8 @@ g_researchVsReeducationSlider = $("#reeducationSlider");
 
 function setupInterface() {
     $('.notification-template').hide();
-    $('#status-host').append(g_statusUi);
+    $('#status-host').append(g_statusUiAllTime);
+    $('#status-host').append(g_statusUiInventory);
     $('#debug-status-host').append(g_debugStatusUi);
     g_computeUnitSliderHost.hide();
     g_researchVsReeducationSliderHost.hide();
@@ -414,16 +476,20 @@ function updateInterface() {
     var json = "{ " + Object.entries(g_currentState).map(([k, v]) => k + ": " + (typeof v === 'number' ? v.toFixed(1) : '[object]')).join(", ") + " }";
     g_debugStatusUi.text(json);
 
+    var trIc = g_currentState.integratedCircuitsBuilt ? "Integrated Circuits" : "Transistors";
+    g_statusUiAllTime.html(formatNumber(g_currentState.transistorsBuilt + g_currentState.integratedCircuitsBuilt, 1) + " " + trIc + " Built");
+
     var text = [
-        [Math.floor(g_currentState.transistors + g_currentState.integratedCircuits) + " Units", true],
-        [Math.floor(g_currentState.computers) + " Computers", g_currentState.computersBuilt > 0],
-        [Math.floor(g_currentState.factories) + " Factories", g_currentState.factoriesBuilt > 0],
-        [Math.floor(g_currentState.labs) + " Labs", g_currentState.labsBuilt > 0],
-        [Math.floor(g_currentState.research) + " Research", g_currentState.labsBuilt > 0],
-        [Math.floor(g_currentState.popularity) + " Popularity", true],
-        [Math.floor(g_currentState.unemployment) + " Unemployment", true],
+        ['<u>Inventory:</u>', true],
+        [formatNumberMetricPrefix(g_currentState.transistors + g_currentState.integratedCircuits) + " " + trIc, true],
+        [formatNumberMetricPrefix(g_currentState.computers) + " Computers", g_currentState.computersBuilt > 0],
+        [formatNumberMetricPrefix(g_currentState.factories) + " Factories", g_currentState.factoriesBuilt > 0],
+        [formatNumberMetricPrefix(g_currentState.labs) + " Labs", g_currentState.labsBuilt > 0],
+        [formatNumberMetricPrefix(g_currentState.research) + " Research", g_currentState.labsBuilt > 0],
+        [formatNumberMetricPrefix(g_currentState.popularity) + " Popularity", true],
+        [formatNumberMetricPrefix(g_currentState.unemployment) + " Unemployment", true],
     ].filter(([t, ok]) => ok).map(([t, ok]) => t).join("<br/>")
-    g_statusUi.html(text)
+    g_statusUiInventory.html(text)
 
     for (let operator of allOperators) {
         if (operator.prereqs(g_currentState)) {
@@ -516,12 +582,17 @@ function backgroundTick() {
         g_currentState.transistorsBuilt += workUnitsBase;
     } else {
         var roboticsMultiplier = researchReward('R_INDUSTRIAL_ROBOTICS_', [2, 5, 10], 1);
-        var mlPower = researchReward('R_ML_', [2, 3, 4, 5], 1);
+        var mlPower = researchReward('R_ML_', [2, 3, 5, 8, 11], 1);
+        console.log('ml power', roboticsMultiplier, mlPower, roboticsMultiplier ** mlPower)
 
         var percentComputerEffort = ~~(g_transistorsVsComputersSlider.val()) / 100;
         var percentTransistorEffort = 1 - percentComputerEffort;
 
-        const workUnitsTransformed = ((roboticsMultiplier) ** mlPower) * workUnitsBase;
+        var surveillanceMultiplier = isResearched('R_ACCEPT_SURVEILLANCE') ? 10 : 1;
+
+        var welfareMultiplier = researchReward('R_WELFARE_', [0.5, 0.005, 0.0000005], 1);
+        
+        const workUnitsTransformed = surveillanceMultiplier * welfareMultiplier * ((roboticsMultiplier) ** mlPower) * workUnitsBase;
 
         // Transistors
         var buildIcOps = workUnitsTransformed * percentTransistorEffort;
@@ -533,7 +604,7 @@ function backgroundTick() {
         const costIc = buildComputer.costs(g_currentState).integratedCircuits;
         const yieldsComputers = buildComputer.yields(g_currentState).computers;
         const buildComputerOps = Math.min(maxBuildComputerOps, g_currentState.integratedCircuits / costIc);
-        console.log(buildIcOps, workUnitsTransformed, percentTransistorEffort, "!!!", maxBuildComputerOps, costIc, yieldsComputers, buildComputerOps)
+        // console.log(buildIcOps, workUnitsTransformed, percentTransistorEffort, "!!!", maxBuildComputerOps, costIc, yieldsComputers, buildComputerOps)
         g_currentState.integratedCircuits -= buildComputerOps * costIc;
         g_currentState.computers += buildComputerOps * yieldsComputers;
     }
@@ -556,9 +627,11 @@ function backgroundTick() {
             }
         }
 
+        var gpuPower = researchReward('R_GPU_', [1.0, 1.05, 1.1, 1.2], 1);
+        
         var mouseMultiplier = isResearched('R_MOUSE') ? 1.1 : 1;
 
-        var dresearchbase = g_currentState.labs * backgroundIntervalSeconds * icUpgradeMultiplier * mouseMultiplier * g_speedUp;
+        var dresearchbase = g_currentState.labs * backgroundIntervalSeconds * g_speedUp * ((icUpgradeMultiplier * mouseMultiplier) ** gpuPower);
         var percentToReeducation = (~~(g_researchVsReeducationSlider.val()) / 100);
         
         var dresearchspent = Math.min(2 * dresearchbase * percentToReeducation, g_currentState.research)
@@ -566,8 +639,8 @@ function backgroundTick() {
         g_currentState.research += dresearchbase - dresearchspent;
         g_currentState.researchBuilt += dresearchbase - dresearchspent;
         
-        var dunemployment = Math.max(0.125 * dresearchspent, 0);
-        g_currentState.unemployment -= dunemployment;
+        var dunemployment = Math.max(1.0 * Math.log10(dresearchspent + 2), 0);
+        g_currentState.unemployment = Math.max(g_currentState.unemployment - dunemployment, 0);
     }
 
     for (var i = 0; i < g_speedUp; i++) {
@@ -576,17 +649,21 @@ function backgroundTick() {
             g_currentState.unemployment = clamp(g_currentState.unemployment, 0, Infinity);
         }
 
-        if (g_currentState.unemployment > 10000) {
+
+        var unemploymentTooHighThreshold = researchReward('R_WELFARE_', [Welfare1Threshold, Welfare2Threshold, Welfare3Threshold], 10 * thousand);
+        var unemploymentTooLowThreshold = unemploymentTooHighThreshold * 0.75;
+
+        if (g_currentState.unemployment > unemploymentTooHighThreshold) {
             let popularityLost = computePopularityDeltaScale(g_currentState, 0.03) * backgroundIntervalSeconds;
             g_currentState.popularity -= popularityLost;
             g_currentState.popularityLostToUnemployment += popularityLost;
         }
 
-        if (g_currentState.unemployment < 7500) {
+        if (g_currentState.unemployment < unemploymentTooLowThreshold) {
             let popularityRecovered = computePopularityDeltaScale(g_currentState, 0.05) * backgroundIntervalSeconds;
             popularityRecovered = Math.min(
                 popularityRecovered,
-                g_currentState.popularityLostToUnemployment);
+            g_currentState.popularityLostToUnemployment);
 
             g_currentState.popularity += popularityRecovered;
             g_currentState.popularityLostToUnemployment -= popularityRecovered;
@@ -612,11 +689,30 @@ function main() {
 window.onload = main;
 window.onkeydown = e => {
     if (e.key === "F7") {
-        g_currentState = {"transistors":0,"transistorsBuilt":1579,"computers":8120.616000000094,"computersBuilt":1354,"factories":19,"factoriesBuilt":19,"factoriesBuiltLastTime":1528184971802,"labs":16,"labsBuilt":16,"research":32576.200000000055,"researchBuilt":128826.19999999963,"integratedCircuits":0,"integratedCircuitsBuilt":117314.07999999894,"popularity":67.66090925973637,"popularityLostToUnemployment":0,"unemployment":1.058756466984667e-16,"aiWinterPopularityThreshold":55.4749245069211,"activeEvents":{},"R_INTEGRATED_CIRCUITS":1,"E_FIRST_TRANSISTOR":1,"E_FIRST_TRANSISTOR_T":1528184764016,"E_FIRST_COMPUTER":1,"E_FIRST_COMPUTER_T":1528184767226,"R_INTEGRATED_CIRCUITS_T":1528184806230,"E_FIRST_INTEGRATED_CIRCUIT":1,"E_FIRST_INTEGRATED_CIRCUIT_T":1528184806314,"R_INDUSTRIAL_ROBOTICS_1":1,"R_INDUSTRIAL_ROBOTICS_1_T":1528184823688,"R_LANGUAGE_1":1,"R_LANGUAGE_1_T":1528184833366,"R_GRAPHICS_0":1,"R_GRAPHICS_0_T":1528184859014,"R_INTEGRATED_CIRCUITS_1":1,"R_INTEGRATED_CIRCUITS_1_T":1528184867830,"R_COMPUTERS_MASS_PRODUCED":1,"R_COMPUTERS_MASS_PRODUCED_T":1528184884842,"R_INTEGRATED_CIRCUITS_2":1,"R_INTEGRATED_CIRCUITS_2_T":1528184906026,"R_INTEGRATED_CIRCUITS_3":1,"R_INTEGRATED_CIRCUITS_3_T":1528184913418,"R_GRAPHICS_1":1,"R_GRAPHICS_1_T":1528184922141,"R_NETWORKING_1":1,"R_NETWORKING_1_T":1528184926093,"R_INTEGRATED_CIRCUITS_4":1,"R_INTEGRATED_CIRCUITS_4_T":1528184934080,"R_MOUSE":1,"R_MOUSE_T":1528184942906,"E_MOUSE_INVENTION":1,"E_MOUSE_INVENTION_T":1528184942909,"R_NETWORKING_2":1,"R_NETWORKING_2_T":1528184943349,"R_EMAIL":1,"R_EMAIL_T":1528184943952,"R_CHAT":1,"R_CHAT_T":1528184944275,"E_PERSONAL_COMPUTING":1,"E_PERSONAL_COMPUTING_T":1528184945514,"R_ML_1":1,"R_ML_1_T":1528184953487,"R_INTERNET":1,"R_INTERNET_T":1528184954276,"R_LANGUAGE_2":1,"R_LANGUAGE_2_T":1528184955619,"E_PERCEPTRONS":1,"E_PERCEPTRONS_T":1528184956037,"E_AI_WINTER":1,"E_AI_WINTER_T":1528184969602,"R_COMPUTER_GAMES_2D":1,"R_COMPUTER_GAMES_2D_T":1528184982627,"R_ML_2":1,"R_ML_2_T":1528185000298,"E_AI_WINTER_END":1,"E_AI_WINTER_END_T":1528185000303,"R_INTEGRATED_CIRCUITS_5":1,"R_INTEGRATED_CIRCUITS_5_T":1528185004497,"R_LANGUAGE_3":1,"R_LANGUAGE_3_T":1528185014221,"R_GRAPHICS_2":1,"R_GRAPHICS_2_T":1528185017757,"R_COMPUTER_GAMES_3D":1,"R_COMPUTER_GAMES_3D_T":1528185028508,"R_GPU_1":1,"R_GPU_1_T":1528185035054};
+        g_currentState = {"transistors":0,"transistorsBuilt":1579,"computers":8120.616000000094,"computersBuilt":1354,"factories":19,"factoriesBuilt":19,"factoriesBuiltLastTime":1528184971802,"labs":16,"labsBuilt":16,"research":32576.200000000055,"researchBuilt":128826.19999999963,"integratedCircuits":0,"integratedCircuitsBuilt":117314.07999999894,"popularity":67.66090925973637,"popularityLostToUnemployment":0,"unemployment":1.058756466984667e-16,"aiWinterPopularityThreshold":55.4749245069211,"activeEvents":{},"R_INTEGRATED_CIRCUITS":1,"E_FIRST_TRANSISTOR":1,"E_FIRST_TRANSISTOR_T":1528184764016,"E_FIRST_COMPUTER":1,"E_FIRST_COMPUTER_T":1528184767226,"R_INTEGRATED_CIRCUITS_T":1528184806230,"E_FIRST_INTEGRATED_CIRCUIT":1,"E_FIRST_INTEGRATED_CIRCUIT_T":1528184806314,"R_INDUSTRIAL_ROBOTICS_1":1,"R_INDUSTRIAL_ROBOTICS_1_T":1528184823688,"R_LANGUAGE_1":1,"R_LANGUAGE_1_T":1528184833366,"R_GRAPHICS_0":1,"R_GRAPHICS_0_T":1528184859014,"R_INTEGRATED_CIRCUITS_1":1,"R_INTEGRATED_CIRCUITS_1_T":1528184867830,"R_COMPUTERS_MASS_PRODUCED":1,"R_COMPUTERS_MASS_PRODUCED_T":1528184884842,"R_INTEGRATED_CIRCUITS_2":1,"R_INTEGRATED_CIRCUITS_2_T":1528184906026,"R_INTEGRATED_CIRCUITS_3":1,"R_INTEGRATED_CIRCUITS_3_T":1528184913418,"R_GRAPHICS_1":1,"R_GRAPHICS_1_T":1528184922141,"R_NETWORKING_1":1,"R_NETWORKING_1_T":1528184926093,"R_INTEGRATED_CIRCUITS_4":1,"R_INTEGRATED_CIRCUITS_4_T":1528184934080,"R_MOUSE":1,"R_MOUSE_T":1528184942906,"E_MOUSE_INVENTION":1,"E_MOUSE_INVENTION_T":1528184942909,"R_NETWORKING_2":1,"R_NETWORKING_2_T":1528184943349,"R_EMAIL":1,"R_EMAIL_T":1528184943952,"R_CHAT":1,"R_CHAT_T":1528184944275,"E_PERSONAL_COMPUTING":1,"E_PERSONAL_COMPUTING_T":1528184945514,"R_ML_1":1,"R_ML_1_T":1528184953487,"R_BROWSERS":1,"R_BROWSERS_T":1528184954276,"R_LANGUAGE_2":1,"R_LANGUAGE_2_T":1528184955619,"E_PERCEPTRONS":1,"E_PERCEPTRONS_T":1528184956037,"E_AI_WINTER":1,"E_AI_WINTER_T":1528184969602,"R_COMPUTER_GAMES_2D":1,"R_COMPUTER_GAMES_2D_T":1528184982627,"R_ML_2":1,"R_ML_2_T":1528185000298,"E_AI_WINTER_END":1,"E_AI_WINTER_END_T":1528185000303,"R_INTEGRATED_CIRCUITS_5":1,"R_INTEGRATED_CIRCUITS_5_T":1528185004497,"R_LANGUAGE_3":1,"R_LANGUAGE_3_T":1528185014221,"R_GRAPHICS_2":1,"R_GRAPHICS_2_T":1528185017757,"R_COMPUTER_GAMES_3D":1,"R_COMPUTER_GAMES_3D_T":1528185028508,"R_GPU_1":1,"R_GPU_1_T":1528185035054, 'surveillanceEnabled': -1};
     }
     if (e.key === "F6") {
         for (let x of $(".notification-template")) {
             showNotification(x.id)
         }
+    }
+    if (e.key === "F10") {
+        // Right before GPU IV purchase.
+        g_currentState = {"transistors":0,"transistorsBuilt":1579,"computers":191464420.55200005,"computersBuilt":1354,"factories":65,"factoriesBuilt":65,"factoriesBuiltLastTime":1528184971802,"labs":121,"labsBuilt":121,"research":162702750.94417468,"researchBuilt":355700000.94416016,"integratedCircuits":441468000,"integratedCircuitsBuilt":10890250078.76,"popularity":306.38634723621254,"popularityLostToUnemployment":0,"unemployment":0,"aiWinterPopularityThreshold":55.4749245069211,"activeEvents":{},"R_INTEGRATED_CIRCUITS":1,"E_FIRST_TRANSISTOR":1,"E_FIRST_TRANSISTOR_T":1528184764016,"E_FIRST_COMPUTER":1,"E_FIRST_COMPUTER_T":1528184767226,"R_INTEGRATED_CIRCUITS_T":1528184806230,"E_FIRST_INTEGRATED_CIRCUIT":1,"E_FIRST_INTEGRATED_CIRCUIT_T":1528184806314,"R_INDUSTRIAL_ROBOTICS_1":1,"R_INDUSTRIAL_ROBOTICS_1_T":1528184823688,"R_LANGUAGE_1":1,"R_LANGUAGE_1_T":1528184833366,"R_GRAPHICS_0":1,"R_GRAPHICS_0_T":1528184859014,"R_INTEGRATED_CIRCUITS_1":1,"R_INTEGRATED_CIRCUITS_1_T":1528184867830,"R_COMPUTERS_MASS_PRODUCED":1,"R_COMPUTERS_MASS_PRODUCED_T":1528184884842,"R_INTEGRATED_CIRCUITS_2":1,"R_INTEGRATED_CIRCUITS_2_T":1528184906026,"R_INTEGRATED_CIRCUITS_3":1,"R_INTEGRATED_CIRCUITS_3_T":1528184913418,"R_GRAPHICS_1":1,"R_GRAPHICS_1_T":1528184922141,"R_NETWORKING_1":1,"R_NETWORKING_1_T":1528184926093,"R_INTEGRATED_CIRCUITS_4":1,"R_INTEGRATED_CIRCUITS_4_T":1528184934080,"R_MOUSE":1,"R_MOUSE_T":1528184942906,"E_MOUSE_INVENTION":1,"E_MOUSE_INVENTION_T":1528184942909,"R_NETWORKING_2":1,"R_NETWORKING_2_T":1528184943349,"R_EMAIL":1,"R_EMAIL_T":1528184943952,"R_CHAT":1,"R_CHAT_T":1528184944275,"E_PERSONAL_COMPUTING":1,"E_PERSONAL_COMPUTING_T":1528184945514,"R_ML_1":1,"R_ML_1_T":1528184953487,"R_BROWSERS":1,"R_BROWSERS_T":1528184954276,"R_LANGUAGE_2":1,"R_LANGUAGE_2_T":1528184955619,"E_PERCEPTRONS":1,"E_PERCEPTRONS_T":1528184956037,"E_AI_WINTER":1,"E_AI_WINTER_T":1528184969602,"R_COMPUTER_GAMES_2D":1,"R_COMPUTER_GAMES_2D_T":1528184982627,"R_ML_2":1,"R_ML_2_T":1528185000298,"E_AI_WINTER_END":1,"E_AI_WINTER_END_T":1528185000303,"R_INTEGRATED_CIRCUITS_5":1,"R_INTEGRATED_CIRCUITS_5_T":1528185004497,"R_LANGUAGE_3":1,"R_LANGUAGE_3_T":1528185014221,"R_GRAPHICS_2":1,"R_GRAPHICS_2_T":1528185017757,"R_COMPUTER_GAMES_3D":1,"R_COMPUTER_GAMES_3D_T":1528185028508,"R_GPU_1":1,"R_GPU_1_T":1528185035054,"surveillanceEnabled":1,"R_ACCEPT_SURVEILLANCE":1,"R_ACCEPT_SURVEILLANCE_T":1528264657182,"R_INTEGRATED_CIRCUITS_6":1,"R_INTEGRATED_CIRCUITS_6_T":1528264695329,"R_LANGUAGE_4":1,"R_LANGUAGE_4_T":1528264695921,"R_INDUSTRIAL_ROBOTICS_2":1,"R_INDUSTRIAL_ROBOTICS_2_T":1528264698240,"R_GPU_2":1,"R_GPU_2_T":1528264791962,"R_GPU_3":1,"R_GPU_3_T":1528264857278,"R_INTEGRATED_CIRCUITS_7":1,"R_INTEGRATED_CIRCUITS_7_T":1528265029490,"R_LANGUAGE_5":1,"R_LANGUAGE_5_T":1528265036086,"E_REEDUCATION_AVAILABLE":1,"E_REEDUCATION_AVAILABLE_T":1528265097502,"R_ML_3":1,"R_ML_3_T":1528265106328,"R_VR":1,"R_VR_T":1528265107990,"R_REEDUCATION":1,"R_REEDUCATION_T":1528265121987,"R_INTEGRATED_CIRCUITS_8":1,"R_INTEGRATED_CIRCUITS_8_T":1528265298805,"R_AR":1,"R_AR_T":1528267217807,"R_IOT":1,"R_IOT_T":1528267238647,"R_ML_4":1,"R_ML_4_T":1528267741828,"R_INTEGRATED_CIRCUITS_9":1,"R_INTEGRATED_CIRCUITS_9_T":1528267820752}
+        g_transistorsVsComputersSlider.val("16")
+        g_researchVsReeducationSlider.val("8")
+    }
+    if (e.key === "q") {
+        g_currentState = {"transistors":0,"transistorsBuilt":1579,"computers":958177967995.0524,"computersBuilt":1354,"factories":98,"factoriesBuilt":98,"factoriesBuiltLastTime":1528184971802,"labs":182,"labsBuilt":182,"research":1644422292.2754986,"researchBuilt":2537419542.2755237,"integratedCircuits":12347571468000,"integratedCircuitsBuilt":66517724742266.26,"popularity":306.3863472362127,"popularityLostToUnemployment":0,"unemployment":223906.81370253224,"aiWinterPopularityThreshold":55.4749245069211,"activeEvents":{},"R_INTEGRATED_CIRCUITS":1,"E_FIRST_TRANSISTOR":1,"E_FIRST_TRANSISTOR_T":1528184764016,"E_FIRST_COMPUTER":1,"E_FIRST_COMPUTER_T":1528184767226,"R_INTEGRATED_CIRCUITS_T":1528184806230,"E_FIRST_INTEGRATED_CIRCUIT":1,"E_FIRST_INTEGRATED_CIRCUIT_T":1528184806314,"R_INDUSTRIAL_ROBOTICS_1":1,"R_INDUSTRIAL_ROBOTICS_1_T":1528184823688,"R_LANGUAGE_1":1,"R_LANGUAGE_1_T":1528184833366,"R_GRAPHICS_0":1,"R_GRAPHICS_0_T":1528184859014,"R_INTEGRATED_CIRCUITS_1":1,"R_INTEGRATED_CIRCUITS_1_T":1528184867830,"R_COMPUTERS_MASS_PRODUCED":1,"R_COMPUTERS_MASS_PRODUCED_T":1528184884842,"R_INTEGRATED_CIRCUITS_2":1,"R_INTEGRATED_CIRCUITS_2_T":1528184906026,"R_INTEGRATED_CIRCUITS_3":1,"R_INTEGRATED_CIRCUITS_3_T":1528184913418,"R_GRAPHICS_1":1,"R_GRAPHICS_1_T":1528184922141,"R_NETWORKING_1":1,"R_NETWORKING_1_T":1528184926093,"R_INTEGRATED_CIRCUITS_4":1,"R_INTEGRATED_CIRCUITS_4_T":1528184934080,"R_MOUSE":1,"R_MOUSE_T":1528184942906,"E_MOUSE_INVENTION":1,"E_MOUSE_INVENTION_T":1528184942909,"R_NETWORKING_2":1,"R_NETWORKING_2_T":1528184943349,"R_EMAIL":1,"R_EMAIL_T":1528184943952,"R_CHAT":1,"R_CHAT_T":1528184944275,"E_PERSONAL_COMPUTING":1,"E_PERSONAL_COMPUTING_T":1528184945514,"R_ML_1":1,"R_ML_1_T":1528184953487,"R_BROWSERS":1,"R_BROWSERS_T":1528184954276,"R_LANGUAGE_2":1,"R_LANGUAGE_2_T":1528184955619,"E_PERCEPTRONS":1,"E_PERCEPTRONS_T":1528184956037,"E_AI_WINTER":1,"E_AI_WINTER_T":1528184969602,"R_COMPUTER_GAMES_2D":1,"R_COMPUTER_GAMES_2D_T":1528184982627,"R_ML_2":1,"R_ML_2_T":1528185000298,"E_AI_WINTER_END":1,"E_AI_WINTER_END_T":1528185000303,"R_INTEGRATED_CIRCUITS_5":1,"R_INTEGRATED_CIRCUITS_5_T":1528185004497,"R_LANGUAGE_3":1,"R_LANGUAGE_3_T":1528185014221,"R_GRAPHICS_2":1,"R_GRAPHICS_2_T":1528185017757,"R_COMPUTER_GAMES_3D":1,"R_COMPUTER_GAMES_3D_T":1528185028508,"R_GPU_1":1,"R_GPU_1_T":1528185035054,"surveillanceEnabled":1,"R_ACCEPT_SURVEILLANCE":1,"R_ACCEPT_SURVEILLANCE_T":1528264657182,"R_INTEGRATED_CIRCUITS_6":1,"R_INTEGRATED_CIRCUITS_6_T":1528264695329,"R_LANGUAGE_4":1,"R_LANGUAGE_4_T":1528264695921,"R_INDUSTRIAL_ROBOTICS_2":1,"R_INDUSTRIAL_ROBOTICS_2_T":1528264698240,"R_GPU_2":1,"R_GPU_2_T":1528264791962,"R_GPU_3":1,"R_GPU_3_T":1528264857278,"R_INTEGRATED_CIRCUITS_7":1,"R_INTEGRATED_CIRCUITS_7_T":1528265029490,"R_LANGUAGE_5":1,"R_LANGUAGE_5_T":1528265036086,"E_REEDUCATION_AVAILABLE":1,"E_REEDUCATION_AVAILABLE_T":1528265097502,"R_ML_3":1,"R_ML_3_T":1528265106328,"R_VR":1,"R_VR_T":1528265107990,"R_REEDUCATION":1,"R_REEDUCATION_T":1528265121987,"R_INTEGRATED_CIRCUITS_8":1,"R_INTEGRATED_CIRCUITS_8_T":1528265298805,"R_AR":1,"R_AR_T":1528267217807,"R_IOT":1,"R_IOT_T":1528267238647,"R_ML_4":1,"R_ML_4_T":1528267741828,"R_INTEGRATED_CIRCUITS_9":1,"R_INTEGRATED_CIRCUITS_9_T":1528267820752,"R_GPU_4":1,"R_GPU_4_T":1528271451655,"E_WELFARE_AVAILABLE":1,"E_WELFARE_AVAILABLE_T":1528271458639,"R_WELFARE_1":1,"R_WELFARE_1_T":1528271482778,"R_ML_5":1,"R_ML_5_T":1528271508988}
+        g_transistorsVsComputersSlider.val("16")
+        g_researchVsReeducationSlider.val("8")
+    }
+    if (e.key === '+') {
+        console.log("20x")
+        g_speedUp = 20;
+    }
+    if (e.key === '-') {
+        console.log("2x")
+        g_speedUp = 2;
     }
 }
