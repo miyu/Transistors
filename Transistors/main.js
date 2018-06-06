@@ -700,8 +700,9 @@ function backgroundTick() {
         }
     }
 
-    if (isResearched("R_COMPUTERS_MASS_PRODUCED")) {
-//        g_currentState
+    if (isResearched("R_ACCEPT_SURVEILLANCE") || isResearched("R_REJECT_SURVEILLANCE")) {
+        acceptSurveillance.button.remove();
+        rejectSurveillance.button.remove();
     }
 
     updateInterface();
