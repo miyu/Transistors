@@ -621,8 +621,8 @@ function setupInterface() {
     $('#status-host').append(g_statusUiAllTime);
     $('#status-host').append(g_statusUiInventory);
     $('#debug-status-host').append(g_debugStatusUi);
-    g_computeUnitSliderHost.hide();
-    g_researchVsReeducationSliderHost.hide();
+    g_computeUnitSliderHost[0].style.visibility = "hidden";
+    g_researchVsReeducationSliderHost[0].style.visibility = "hidden";
 
     for (let operator of allOperators) {
         var button = $("<button>");
@@ -778,11 +778,11 @@ function updateInterface(updateDeltas) {
     }
     
     if (isResearched('R_COMPUTERS_MASS_PRODUCED')) {
-        g_computeUnitSliderHost.show();
+        g_computeUnitSliderHost[0].style.visibility = "";
     }
 
     if (isResearched('R_REEDUCATION')) {
-        g_researchVsReeducationSliderHost.show();
+        g_researchVsReeducationSliderHost[0].style.visibility = "";
     }
 }
 
