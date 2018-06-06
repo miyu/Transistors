@@ -240,12 +240,13 @@ class UnemploymentEventOperator extends EventOperator {
     }
     
     prereqs(state) {
-        return super.prereqs(state) && state.popularityLostToUnemployment >= state.popularity;
+        const totalPop = state.popularityLostToUnemployment + state.popularity
+        return state.popularityLostToUnemployment >= totalPop * this.popularityProportion && super.prereqs(state);
     }
     
     permitted(state) {
         const totalPop = state.popularityLostToUnemployment + state.popularity
-        return state.popularityLostToUnemployment >= state.popularity * this.popularityProportion && super.permitted(state);//&& super.prereqs(state)
+        return state.popularityLostToUnemployment >= totalPop * this.popularityProportion && super.permitted(state);//&& super.prereqs(state)
     }
 }
 
