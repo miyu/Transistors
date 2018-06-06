@@ -39,7 +39,9 @@ const InitialState = {
     surveillanceEnabled: -1,    
 
     aiWinterPopularityThreshold: Infinity,
-    activeEvents: {}
+    activeEvents: {},
+
+    R_INTEGRATED_CIRCUITS: 0,
 };
 
 let OpType = {
@@ -414,6 +416,7 @@ allOperators.push(researchReeducation);
 
 var eventWelfare = new EventOperator("Welfare Available", { unemployment: 10000 }, 'E_WELFARE_AVAILABLE', [], () => showNotification('E_WELFARE_AVAILABLE'), { R_REEDUCATION: 5000 / g_eventSpeedUp });
 var researchWelfare1 = new ResearchOperator("Welfare I", { unemployment: 10000 }, { integratedCircuits: 10 * billion }, {}, 'R_WELFARE_1', ['E_WELFARE_AVAILABLE'], null, {E_WELFARE_AVAILABLE: 10000 / g_eventSpeedUp});
+var researchWelfare2 = new ResearchOperator("Welfare II", { unemployment: Welfare1Threshold }, { integratedCircuits: 1 * quadrillion }, {}, 'R_WELFARE_2', ['R_WELFARE_1'], null, {R_WELFARE_1: 10000 / g_eventSpeedUp});
 var researchWelfare2 = new ResearchOperator("Welfare II", { unemployment: Welfare1Threshold }, { integratedCircuits: 1 * quadrillion }, {}, 'R_WELFARE_2', ['R_WELFARE_1'], null, {R_WELFARE_1: 10000 / g_eventSpeedUp});
 var researchWelfare3 = new ResearchOperator("Welfare III", { unemployment: Welfare2Threshold }, { integratedCircuits: 1 * quintillion }, {}, 'R_WELFARE_3', ['R_WELFARE_2'], null, {R_WELFARE_2: 10000 / g_eventSpeedUp});
 allOperators.push(eventWelfare);
