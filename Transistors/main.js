@@ -12,7 +12,7 @@ const quadrillion = thousand * trillion;
 const quintillion = thousand * quadrillion;
 
 const g_speedUpEnabled = true;
-let g_debugSpeedUp = 1;
+let g_debugSpeedUp = 2;
 let g_speedUp = -1;
 let g_eventSpeedUp = g_speedUpEnabled ? 4 : 1;
 
@@ -834,10 +834,10 @@ window.onkeydown = e => {
 
     if (e.key === '+') {
         console.log("20x")
-        g_speedUp = 20;
+        g_debugSpeedUp = 20;
     }
     if (e.key === '-') {
         console.log("2x")
-        g_speedUp = 2;
+        g_debugSpeedUp = 2;
     }
 }
