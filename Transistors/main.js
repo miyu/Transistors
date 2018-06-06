@@ -86,7 +86,7 @@ const totalComputeUnits = s => {
     return s.transistorsBuilt + s.integratedCircuitsBuilt;
 };
 
-const formatNumber = (x, dec) => x.toLocaleString(undefined, { minimumFractionDigits: Math.round(Math.log10(dec || 1000)), maximumFractionDigits: Math.round(Math.log10(dec || 1000)) })
+const formatNumber = (x, dec) => x.toLocaleString(undefined, { minimumFractionDigits: Math.round(Math.log10(dec || 100)), maximumFractionDigits: Math.round(Math.log10(dec || 100)) })
 
 function formatNumberMetricPrefix(n) {
     if (n >= quintillion) {
