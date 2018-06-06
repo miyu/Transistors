@@ -4,9 +4,18 @@
   <title>Transistors!</title>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
   <style>
-    #control-host button {
+    .operator {
       clear: both;
       float: left;
+    }
+
+    .operator:not(:first-child) button {
+      margin-top: 1.2em;
+    }
+
+    .operator p {
+      margin: 0;
+      padding: 0;
     }
   </style>
 </head>
@@ -16,7 +25,8 @@
     <div id="debug-status-host" style="position: absolute; bottom: 0"></div>
     <div id="x" style="display: flex; flex-direction: row">
       <div id="control-host" style="flex: 1"></div>
-      <div id="sidebar" style="flex: 1; background: #EEEEEE"></div>
+      <div id="research-host" style="flex: 1"></div>
+      <div id="sidebar" style="flex: 2; background: #EEEEEE"></div>
     </div>
   </div>
   <div class="notification-template" id="E_FIRST_TRANSISTOR">
@@ -35,6 +45,10 @@
     <h2>Neural Networks</h2>
     <p>Researchers create the first perceptron neural network to recognize patterns in inputs.</p>
   </div>
+  <div class="notification-template" id="R_INDUSTRIAL_ROBOTICS_1">
+    <h2>Industrial Robotics</h2>
+    <p>Research towards robots for use factories improves factory output.</p>
+  </div>
   <div class="notification-template" id="E_AI_WINTER">
     <h2>Negative Reports on Neural Networks</h2>
     <p>Researchers find that perceptrons cannot recognize the exclusive-or circuit, and that any non-trivial patterns would require larger neural networks than computers can handle. Interest in neural networks wane. Your research costs increase, and research lab output decreases.</p>
@@ -42,6 +56,14 @@
   <div class="notification-template" id="E_AI_WINTER_END">
     <h2>Backpropagation</h2>
     <p>Backpropagation solves the biggest issues with neural networks, increasing training speed, particularly for multi-layer networks, and allowing neural networks to recognize the exclusive-or pattern properly. Deeper neural networks are now feasible, spurring research in machine learning applications in many areas, such as image processing. The "AI Winter" draws to a close, and research costs and research lab outputs return to normal.</p>
+  </div>
+  <div class="notification-template" id="E_GVT_SURVEILLANCE_AVAILABLE">
+    <h2>Government Surveillance Offer</h2>
+    <p>The government asks you to give fund additional research labs in exchange for a small amount of user data, which will contribute to national security.</p>
+  </div>
+  <div class="notification-template" id="E_GVT_SURVEILLANCE_REVEALED">
+    <h2>Government Surveillance Revealed</h2>
+    <p>Leaked information from the government reveals government security programs that collect user data from private companies. As a result, public opinion drops sharply.</p>
   </div>
   <div class="notification-template" id="E_MOUSE_INVENTED">
     <h2>Computer Mice</h2>
@@ -58,6 +80,30 @@
   <div class="notification-template" id="E_WELFARE_AVAILABLE">
     <h2>Welfare Available</h2>
     <p>With unemployment still being an issue despite reeducation efforts, you consider providing better welfare in the form of integrated circuits. Beware: choosing to provide wellfare is permanent, and will permanently reduce your integrated circuit production.</p>
+  </div>
+  <div class="notification-template" id="E_ALPHAGO">
+    <h2>AI wins in Go against top-ranked player in the world</h2>
+    <p>The wild success of this AI increases popularity.</p>
+  </div>
+  <div class="notification-template" id="E_ML_FRAMEWORKS">
+    <h2>Machine Learning Libraries and Frameworks</h2>
+    <p>Popularization of machine learning libraries and frameworks provides easy access to machine learning technology, allowing the general public to conduct machine learning, increasing popularity significantly.</p>
+  </div>
+  <div class="notification-template" id="E_UNEMPLOYMENT_WARNING">
+    <h2>Technological Unemployment Concerns</h2>
+    <p>The continued state of high technological unemployment is causing concern amongst both experts and the general public. If things continue as is, the government may take action to reduce the effectiveness of technology to reduce strain on the populace.</p>
+  </div>
+  <div class="notification-template" id="E_ROBOT_TAX">
+    <h2>Robot Tax Enacted</h2>
+    <p>Due to continued concerns about technology replacing jobs, the government has enacted a robot tax, halving the effictiveness of all your factories. Further action may be taken if unemployment continues.</p>
+  </div>
+  <div class="notification-template" id="E_RIOTS">
+    <h2>Government Shuts Down Factories and Research Labs</h2>
+    <p>As unemployment continues to increase, the government has elected to forcefully shut down many factories and research labs.</p>
+  </div>
+  <div class="notification-template" id="E_LOSE">
+    <h2>Game Over!</h2>
+    <p>The government shuts down the rest of your factories and research labs.</p>
   </div>
   <!-- Lorem ipsum dolor sit amet, ne unum dissentias mei. Facer nullam euismod ex pri, dicit deserunt argumentum eos id. Quis epicuri nam in, usu no scripta assueverit. Vel reque nullam in, esse habeo semper vim in, in vitae admodum vim. His decore accusata quaestio ei, no electram laboramus mei. Eos id vitae dolore alienum, ea illud cetero diceret quo, ne doctus meliore delicatissimi sed. Mel nobis soluta laboramus ad, et vel assum facilisis, usu dicam salutatus temporibus cu. -->
   <table id="computeUnitSliderHost">

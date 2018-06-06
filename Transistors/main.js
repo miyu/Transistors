@@ -40,12 +40,16 @@ const InitialState = {
 
     unemployment: 0.0,
     unemployedAndEducated: 0.0,
-    surveillanceEnabled: -1,    
+    surveillanceEnabled: -1,
+    
+    robotTaxFactoryMultiplier: 1,
 
     aiWinterPopularityThreshold: Infinity,
     activeEvents: {},
 
     R_INTEGRATED_CIRCUITS: 0,
+    
+    gameOver: 0
 };
 
 let OpType = {
@@ -227,6 +231,22 @@ class EventOperator extends ResearchOperator {
         return super.permitted(state) && super.prereqs(state);
     }
 }
+class UnemploymentEventOperator extends EventOperator {
+    constructor(name, prereqs, key, dependencies, cb, timecond, popularityProportion) {
+        super(name, prereqs, key, dependencies, cb, timecond);
+        this.type = OpType.event;
+        this.popularityProportion = popularityProportion;
+    }
+    
+    prereqs(state) {
+        return super.prereqs(state) && state.popularityLostToUnemployment >= state.popularity;
+    }
+    
+    permitted(state) {
+        const totalPop = state.popularityLostToUnemployment + state.popularity
+        return state.popularityLostToUnemployment >= state.popularity * this.popularityProportion && super.permitted(state);//&& super.prereqs(state)
+    }
+}
 
 var lerp1 = (val, min, max, rangemin, rangemax) => ((Math.max(Math.min(val, max), min) - min) / (max - min)) * (rangemax - rangemin) + rangemin;
 var lerp2 = (val, min, max, rangemin, rangemax) => Math.pow((Math.max(Math.min(val, max), min) - min) / (max - min), 2) * (rangemax - rangemin) + rangemin;
@@ -243,7 +263,8 @@ var buildLab = new PurchaseOperator("Build Research Lab", s => {
     const expPower = s.labsBuilt;
 
     if (isResearched('R_COLLEGE_GRANTS_ADULTS')) {
-        const nlabsdesired = lerp1(s.unemployedAndEducated / (10 * billion), 0, 0.03, 200, 2000);
+        const nlabsdesired = lerp1(s.unemployedAndEducated / (10 * billion), 0, 0.03, 200, 2000) + 
+                             lerp2(s.unemployedAndEducated / (10 * billion), 0, 1, 200, 20000);
         expBase = (expBase ** 200) ** (1 / nlabsdesired);
     }
 
@@ -319,17 +340,17 @@ allOperators.push(upgradeIntegratedCircuits16);
 var researchLanguage1 = new ResearchOperator("Assembly Language", { labs: 5 }, { research: 100 }, {}, 'R_LANGUAGE_1', []); // ASM
 var researchLanguage2 = new ResearchOperator("Basic Programming Languages", {}, { research: 1000 }, {}, 'R_LANGUAGE_2', ['R_LANGUAGE_1']); // Low-level
 var researchLanguage3 = new ResearchOperator("Low-level Programming Languages", {}, { research: 10000 }, {}, 'R_LANGUAGE_3', ['R_LANGUAGE_2']); // C
-var researchLanguage4 = new ResearchOperator("High-level Programming Languages", {}, { research: 100000 }, {}, 'R_LANGUAGE_4', ['R_LANGUAGE_3']); 
-var researchLanguage5 = new ResearchOperator("General-purpose Scripting Languages", {}, { research: 1000000 }, {}, 'R_LANGUAGE_5', ['R_LANGUAGE_4']); // Python
+var researchLanguage4 = new ResearchOperator("High-level Programming Languages", {}, { research: 100000 }, {}, 'R_LANGUAGE_4', ['R_LANGUAGE_3'], handleAddPopularityFactory(1)); 
+var researchLanguage5 = new ResearchOperator("General-purpose Scripting Languages", {}, { research: 1000000 }, {}, 'R_LANGUAGE_5', ['R_LANGUAGE_4'], handleAddPopularityFactory(2)); // Python
 allOperators.push(researchLanguage1);
 allOperators.push(researchLanguage2);
 allOperators.push(researchLanguage3);
 allOperators.push(researchLanguage4);
 allOperators.push(researchLanguage5);
 
-var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factoriesBuilt: 5 }, { factoriesBuilt: 10, research: 100 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS']);
+var industrialRobotics1 = new ResearchOperator("Industrial Robotics", { factoriesBuilt: 5 }, { factoriesBuilt: 10, research: 100 }, {}, 'R_INDUSTRIAL_ROBOTICS_1', ['R_INTEGRATED_CIRCUITS'], () => showNotification('R_INDUSTRIAL_ROBOTICS_1'));
 var industrialRobotics2 = new ResearchOperator("Direct Drive Arm", {}, { research: 1000 }, {}, 'R_INDUSTRIAL_ROBOTICS_2', ['R_INDUSTRIAL_ROBOTICS_1']);
-var industrialRobotics3 = new ResearchOperator("Machine-Learning-Based Robots", { research: 0.5 * billion }, { research: 1 * billion }, {}, 'R_INDUSTRIAL_ROBOTICS_3', ['R_INDUSTRIAL_ROBOTICS_2', 'R_ML_3']);
+var industrialRobotics3 = new ResearchOperator("Machine-Learning-Powered Robots", { research: 0.5 * billion }, { research: 1 * billion }, {}, 'R_INDUSTRIAL_ROBOTICS_3', ['R_INDUSTRIAL_ROBOTICS_2', 'R_ML_3']);
 var industrialRobotics4 = new ResearchOperator("Self-Replication", { research: 1 * billion, R_COLLEGE_GRANTS_ADULTS: 1 }, { research: 5 * billion }, {}, 'R_INDUSTRIAL_ROBOTICS_4', ['R_INDUSTRIAL_ROBOTICS_3', 'R_ML_5']);
 allOperators.push(industrialRobotics1);
 allOperators.push(industrialRobotics2);
@@ -338,14 +359,42 @@ allOperators.push(industrialRobotics4);
 
 var machineLearning1 = new ResearchOperator("Machine Learning: Neural Networks", { research: 500 }, { research: 1000 }, {}, 'R_ML_1', []);
 var machineLearning2 = new ResearchOperator("Machine Learning: Backpropagation", { labsBuilt: 5 }, { labsBuilt: 15, research: 5000 }, {}, 'R_ML_2', ['R_ML_1'], null, { 'E_AI_WINTER': 10000 / g_eventSpeedUp });
-var machineLearning3 = new ResearchOperator("Machine Learning: Support Vector Machines", {}, { research: 2 * million }, {}, 'R_ML_3', ['R_ML_2', 'R_GPU_3']);
-var machineLearning4 = new ResearchOperator("Machine Learning IV: Long-Short Term Memory Recurrent Neural Networks", {}, { research: 50 * million }, {}, 'R_ML_4', ['R_ML_3']);
+var machineLearning3 = new ResearchOperator("Machine Learning: Long-Short Term Memory Recurrent Neural Networks", {}, { research: 2 * million }, {}, 'R_ML_3', ['R_ML_2', 'R_GPU_3']);
+var machineLearning4 = new ResearchOperator("Machine Learning IV: Very Deep Networks", {}, { research: 50 * million }, {}, 'R_ML_4', ['R_ML_3']);
 var machineLearning5 = new ResearchOperator("Machine Learning V: (Future)", {},  { research: 500 * million }, {}, 'R_ML_5', ['R_ML_4', 'R_GPU_4']);
 allOperators.push(machineLearning1);
 allOperators.push(machineLearning2);
 allOperators.push(machineLearning3);
 allOperators.push(machineLearning4);
 allOperators.push(machineLearning5);
+
+var selfDrivingCars = new ResearchOperator("Self-Driving Cars", {research: 200 * million}, { research: 500 * million }, {}, 'R_SELF_DRIVING_CARS', ['R_ML_4'], handleAddPopularityFactory(5));
+allOperators.push(selfDrivingCars);
+
+var virtualAssistants = new ResearchOperator("Virtual Assistants", {research: 75 * million}, { research: 100 * million }, {}, 'R_VIRTUAL_ASSISTANTS', ['R_ML_4'], handleAddPopularityFactory(5));
+var personalAssitantRobots = new ResearchOperator("Personal Assistant Robots", {},  { research: 500 * million }, {}, 'R_PERSONAL_ASSISTANT_ROBOTS', ['R_VIRTUAL_ASSISTANTS'], handleAddPopularityFactory(8));
+allOperators.push(virtualAssistants);
+allOperators.push(personalAssitantRobots);
+
+var computerImplants = new ResearchOperator("Computer Implants", {research: 25 * billion},  { research: 50 * billion }, {}, 'R_COMPUTER_IMPLANTS', ['R_ML_5'], handleAddPopularityFactory(8));
+allOperators.push(computerImplants);
+var neuralVR = new ResearchOperator("Neural Virtual Reality", {research: 100 * trillion},  { research: 500 * trillion }, {}, 'R_NEURAL_VR', ['R_COMPUTER_IMPLANTS', 'R_VR'], handleAddPopularityFactory(10));
+allOperators.push(neuralVR);
+
+
+var eventAlphago = new EventOperator("AI wins in Go against top-ranked player in the world", { }, 'E_ALPHAGO', ['R_ML_4'], handleAlphago, { 'R_ML_4': 30000 / g_eventSpeedUp });
+function handleAlphago(state) {
+    showNotification('E_ALPHAGO')
+    handleAddPopularityFactory(3)(state);
+}
+
+var eventMLFrameworks = new EventOperator("Machine learning frameworks", { }, 'E_ML_FRAMEWORKS', ['R_ML_4', 'R_LANGUAGE_5'], handleAlphago, { 'R_ML_4': 15000 / g_eventSpeedUp });
+function handleAlphago(state) {
+    showNotification('E_ML_FRAMEWORKS')
+    handleAddPopularityFactory(5)(state);
+}
+allOperators.push(eventAlphago);
+allOperators.push(eventMLFrameworks);
 
 var graphics0 = new ResearchOperator("Text-based User Interfaces", { research: 100 }, { research: 200 }, {}, 'R_GRAPHICS_0', ['R_LANGUAGE_1']);
 var graphics1 = new ResearchOperator("Graphical User Interfaces", { research: 1000 }, { research: 1500 }, {}, 'R_GRAPHICS_1', ['R_GRAPHICS_0']);
@@ -398,10 +447,18 @@ allOperators.push(email);
 allOperators.push(instantMessaging);
 allOperators.push(browsers);
 
-var acceptSurveillance = new ResearchOperator("Accept Government Surveillance", {}, {}, { surveillanceEnabled: 2 }, 'R_ACCEPT_SURVEILLANCE', ['R_EMAIL', 'R_CHAT', 'R_BROWSERS'], null, {  });
-var rejectSurveillance = new ResearchOperator("Reject Government Surveillance", {}, {}, { surveillanceEnabled: 1 }, 'R_REJECT_SURVEILLANCE', ['R_EMAIL', 'R_CHAT', 'R_BROWSERS'], null, { });
+var acceptSurveillance = new ResearchOperator("Accept Government Surveillance", {}, {}, { surveillanceEnabled: 2 }, 'R_ACCEPT_SURVEILLANCE', ['E_GVT_SURVEILLANCE_AVAILABLE'], null, {  });
 allOperators.push(acceptSurveillance);
-allOperators.push(rejectSurveillance);
+
+var surveillanceAvailableEvent = new EventOperator("Government Surveillance", {}, 'E_GVT_SURVEILLANCE_AVAILABLE', ['R_EMAIL', 'R_CHAT', 'R_BROWSERS'], () => showNotification('E_GVT_SURVEILLANCE_AVAILABLE'), { 'R_EMAIL': 5000 / g_eventSpeedUp, 'R_CHAT': 5000 / g_eventSpeedUp, 'R_BROWSERS': 5000 / g_eventSpeedUp });
+allOperators.push(surveillanceAvailableEvent)
+
+var surveillanceRevealedEvent = new EventOperator("Government Surveillance", {}, 'E_GVT_SURVEILLANCE_REVEALED', ['E_GVT_SURVEILLANCE_AVAILABLE'], handleSurveillanceRevealed, { 'E_GVT_SURVEILLANCE_AVAILABLE': 120000 / g_eventSpeedUp });
+allOperators.push(surveillanceRevealedEvent)
+function handleSurveillanceRevealed(state) {
+    showNotification('E_GVT_SURVEILLANCE_REVEALED');
+    state.popularity -= computePopularityDeltaScale(g_currentState, 8);
+}
 
 function handleAddPopularityFactory(n) {
     return state => {
@@ -410,15 +467,15 @@ function handleAddPopularityFactory(n) {
 }
 
 function handleResearch2DGames(state) {
-    state.popularity += computePopularityDeltaScale(g_currentState, 1);
+    state.popularity += computePopularityDeltaScale(g_currentState, 2);
 }
 
 function handleResearch3DGames(state) {
-    state.popularity += computePopularityDeltaScale(g_currentState, 1);
+    state.popularity += computePopularityDeltaScale(g_currentState, 2);
 }
 
 function handleResearchVirtualReality(state) {
-    state.popularity += computePopularityDeltaScale(g_currentState, 1);
+    state.popularity += computePopularityDeltaScale(g_currentState, 3);
 }
 
 var computersMassProduced = new ResearchOperator("Computers Mass Produced", { research: 300 }, { research: 500 }, {}, 'R_COMPUTERS_MASS_PRODUCED', ['R_INDUSTRIAL_ROBOTICS_1']);
@@ -442,7 +499,7 @@ function handleAiWinter(state) {
     };
 
     state.aiWinterPopularityThreshold = state.popularity;
-    state.popularity -= 10;
+    state.popularity -= computePopularityDeltaScale(g_currentState, 2);
 
     return state;
 }
@@ -458,7 +515,11 @@ allOperators.push(aiWinter);
 allOperators.push(aiWinterEnd);
 
 var eventFirstTransistor = new EventOperator("First Transistor", { transistorsBuilt: 1 }, 'E_FIRST_TRANSISTOR', [], () => showNotification('E_FIRST_TRANSISTOR'), { });
-var eventFirstComputer = new EventOperator("First Computer", { computersBuilt: 1 }, 'E_FIRST_COMPUTER', [], () => showNotification('E_FIRST_COMPUTER'), { });
+var eventFirstComputer = new EventOperator("First Computer", { computersBuilt: 1 }, 'E_FIRST_COMPUTER', [], handleFirstComputer, { });
+function handleFirstComputer(state) {
+    showNotification('E_FIRST_COMPUTER');
+    state.popularity += computePopularityDeltaScale(g_currentState, 1);
+}
 var eventFirstIntegratedCircuit = new EventOperator("First Integrated Circuit", { integratedCircuitsBuilt: 1 }, 'E_FIRST_INTEGRATED_CIRCUIT', [], () => showNotification('E_FIRST_INTEGRATED_CIRCUIT'), { });
 allOperators.push(eventFirstTransistor);
 allOperators.push(eventFirstComputer);
@@ -475,7 +536,7 @@ allOperators.push(eventReeducation);
 allOperators.push(researchReeducation);
 
 var eventWelfare = new EventOperator("Welfare Available", { unemployment: 10000 }, 'E_WELFARE_AVAILABLE', [], () => showNotification('E_WELFARE_AVAILABLE'), { R_REEDUCATION: 15000 / g_eventSpeedUp });
-var researchWelfare1 = new ResearchOperator("Welfare I", { unemployment: 10000 }, { integratedCircuits: 1 * million }, {}, 'R_WELFARE_1', ['E_WELFARE_AVAILABLE'], null, {/*E_WELFARE_AVAILABLE: 10000 / g_eventSpeedUp*/});
+var researchWelfare1 = new ResearchOperator("Welfare", { unemployment: 10000 }, { integratedCircuits: 1 * million }, {}, 'R_WELFARE_1', ['E_WELFARE_AVAILABLE'], null, {/*E_WELFARE_AVAILABLE: 10000 / g_eventSpeedUp*/});
 var researchWelfare2 = new ResearchOperator("Welfare II", { unemployment: Welfare1Threshold }, { integratedCircuits: 1 * quadrillion }, {}, 'R_WELFARE_2', ['R_WELFARE_1'], null, {R_WELFARE_1: 10000 / g_eventSpeedUp});
 var researchWelfare3 = new ResearchOperator("Welfare III", { unemployment: Welfare2Threshold / 100 }, { integratedCircuits: 10 * quadrillion }, {}, 'R_WELFARE_3', ['R_WELFARE_2'], null, {R_WELFARE_2: 10000 / g_eventSpeedUp});
 var researchWelfare4 = new ResearchOperator("Welfare IV (Automation)", { unemployment: Welfare3Threshold / 100 }, { research: 1 * trillion }, {}, 'R_WELFARE_4', ['R_WELFARE_3'], null, {R_WELFARE_3: 10000 / g_eventSpeedUp});
@@ -492,6 +553,36 @@ allOperators.push(researchWelfare3);
 allOperators.push(researchWelfare4);
 allOperators.push(researchCollegeGrants2);
 allOperators.push(researchTimeSpeedup1);
+
+var unemployment25Pct = new UnemploymentEventOperator("Unemployment Warning", { }, 'E_UNEMPLOYMENT_WARNING', ['E_REEDUCATION_AVAILABLE'], handleUnemployment25Pct, { }, .25);
+allOperators.push(unemployment25Pct);
+function handleUnemployment25Pct(state) {
+    showNotification('E_UNEMPLOYMENT_WARNING');
+}
+
+var unemployment50Pct = new UnemploymentEventOperator("Unemployment Robot Tax", { }, 'E_ROBOT_TAX', ['E_REEDUCATION_AVAILABLE'], handleUnemployment50Pct, { }, .5);
+function handleUnemployment50Pct(state) {
+    showNotification('E_ROBOT_TAX');
+    state.robotTaxFactoryMultiplier = .5;
+}
+allOperators.push(unemployment50Pct);
+
+var unemployment75Pct = new UnemploymentEventOperator("Unemployment Riots", { }, 'E_RIOTS', ['E_REEDUCATION_AVAILABLE'], handleUnemployment75Pct, { }, .75);
+function handleUnemployment75Pct(state) {
+    showNotification('E_RIOTS');
+    state.factories /= 4;
+    state.labs /= 2;
+}
+allOperators.push(unemployment75Pct);
+
+var unemploymentLose = new UnemploymentEventOperator("Lose", { }, 'E_LOSE', ['E_REEDUCATION_AVAILABLE'], handleUnemploymentLose, { }, 1);
+function handleUnemploymentLose(state) {
+    showNotification('E_LOSE');
+    state.factories = 0;
+    state.labs = 0;
+    state.gameOver = 1;
+}
+allOperators.push(unemploymentLose);
 
 function dumpGraph() {
     const nodes = [];
@@ -536,14 +627,53 @@ function setupInterface() {
     for (let operator of allOperators) {
         var button = $("<button>");
         button.click(() => handleOperatorClicked(operator));
-        button.hide();
 
-        $("#control-host").append(button);
+        operator.hover = false;
+        button.mouseenter(() => {operator.hover = true});
+        button.mouseleave(() => {operator.hover = false});
+
+        if (operator.name.includes("Build") && operator.name.includes("x)")) {
+            const n = operator.name.substring(operator.name.indexOf('(') + 1, operator.name.indexOf('x)'));
+            const text = operator.name.substring(0, operator.name.indexOf('(')).trim()
+            const baseop = allOperators.filter(o => o.name === text)[0]
+
+            baseop.div.append(button)
+            baseop.div.append(baseop.p)
+            baseop.alts.push(operator);
+
+            operator.button = button;
+            operator.button.short = true;
+            operator.button.text("x" + n);
+            operator.div = button;
+            operator.p = $("<p>")
+            continue;
+        }
+        
+        var div = $("<div class='operator'></div>")
+        div.append(button);
+        div.hide();
+
+        var p = $("<p>")
+        div.append(p);
+
+        if (operator.type === OpType.research) {
+            $("#research-host").append(div);
+        } else {
+            $("#control-host").append(div);
+        }
+
         operator.button = button;
+        operator.div = div;
+        operator.p = p;
+        operator.alts = [];
     }
 }
 
-function updateInterface() {
+let g_lastLines = []
+let g_ticksToDelta = 10;
+let g_ticksCounter = 0;
+
+function updateInterface(updateDeltas) {
     var json = "{ " + Object.entries(g_currentState).map(([k, v]) => k + ": " + (typeof v === 'number' ? v.toFixed(1) : '[object]')).join(", ") + " }";
     g_debugStatusUi.text(json);
 
@@ -551,19 +681,46 @@ function updateInterface() {
     g_statusUiAllTime.html(formatNumber(g_currentState.transistorsBuilt + g_currentState.integratedCircuitsBuilt, 1) + " " + trIc + " Built");
 
     var lines = [
-        ['<u>Inventory:</u>', true],
-        [formatNumberMetricPrefix(g_currentState.transistors + g_currentState.integratedCircuits) + " " + trIc, true],
-        [formatNumberMetricPrefix(g_currentState.computers) + " Computers", g_currentState.computersBuilt > 0],
-        [formatNumberMetricPrefix(g_currentState.factories) + " Factories", g_currentState.factoriesBuilt > 0],
-        [formatNumberMetricPrefix(g_currentState.factoryFactories) + " Factory Factories", g_currentState.factoryFactoriesBuilt > 0],
-        [formatNumberMetricPrefix(g_currentState.labs) + " Labs", g_currentState.labsBuilt > 0],
-        [formatNumberMetricPrefix(g_currentState.research) + " Research", g_currentState.labsBuilt > 0],
-        [formatNumberMetricPrefix(g_currentState.popularity) + " Popularity", true]
+        [g_currentState.transistors + g_currentState.integratedCircuits, trIc, true, true],
+        [g_currentState.computers, "Computers", g_currentState.factoriesBuilt > 0, g_currentState.computersBuilt > 0],
+        [g_currentState.factories, "Factories", false, g_currentState.factoriesBuilt > 0],
+        [g_currentState.factoryFactories, "Factory Factories", false, g_currentState.factoryFactoriesBuilt > 0],
+        [g_currentState.labs, "Labs", false, g_currentState.labsBuilt > 0],
+        [g_currentState.research, "Research", true, g_currentState.labsBuilt > 0],
+        [g_currentState.popularity, "Popularity", true, true]
     ];
 
     if (!isResearched('R_INDUSTRIAL_ROBOTICS_3')) {
-        lines.push([formatNumberMetricPrefix(g_currentState.unemployment) + " Unemployed due to automation", true]);
-    } else {
+        lines.push([g_currentState.unemployment, " Unemployed due to automation", true, true]);
+    }
+
+    const lastLines = g_lastLines;
+    if (updateDeltas) {
+        g_ticksCounter--;
+        if (g_ticksCounter <= g_ticksToDelta) {
+            g_lastLines = JSON.parse(JSON.stringify(lines))
+            g_ticksCounter = g_ticksToDelta;
+        }
+    }
+    for (let i = 0; i < lines.length; i++) {
+        const l = lines[i];
+        if (i >= lastLines.length) {
+            l.push(0);
+        } else {
+            const delta = l[0] - lastLines[i][0];
+            l.push(delta / (backgroundIntervalSeconds * g_ticksToDelta));
+        }
+
+        lines[i] = [formatNumberMetricPrefix(l[0]) + " " + l[1] + (l[2] ? (" (" + formatNumberMetricPrefix(l[4] * 4) + "/Second)") : ""), l[3]]
+    }
+
+    lines.unshift(['<u>Inventory:</u>', "", false, true]);
+    
+    if (isResearched('R_INDUSTRIAL_ROBOTICS_3')) {
+        if (isResearched('R_SPEED_UP_GAME_TIME_1')) {
+            lines.push(["10x Game Speed", true])
+        }
+
         lines.push(["", true]);
         lines.push(["<b>" + formatNumber(100 * (g_currentState.unemployment + g_currentState.unemployedAndEducated) / (10 * billion), billion) + "% of world unemployed due to automation:</b>", true]);
         lines.push(["&nbsp;&nbsp;&nbsp;&nbsp;" + formatNumberMetricPrefix(g_currentState.unemployment) + " Uneducated", true]);
@@ -574,8 +731,9 @@ function updateInterface() {
     g_statusUiInventory.html(text)
 
     for (let operator of allOperators) {
+
         if (operator.prereqs(g_currentState)) {
-            operator.button.show();
+            operator.div.show();
         }
 
         var permitted = operator.permitted(g_currentState);
@@ -585,9 +743,37 @@ function updateInterface() {
             operator.button.click();
         }
 
+        if (operator.button.short) continue;
+
         var opcontent = operator.name;
-        var opdesc = operator.description(g_currentState);
-        if (opdesc) opcontent += "<br/>(" + opdesc + ")";
+        if (operator.type === OpType.research) {
+            var opdesc = operator.description(g_currentState);
+            opcontent += "<br/>(" + opdesc + ")";
+        } else {
+            var opdesc = operator.description(g_currentState);
+            if (opdesc) {
+                let cop = operator;
+                if (!operator.button.short) {
+                    for (let alt of operator.alts) {
+                        if (alt.hover) {
+                            cop = alt;
+                            opdesc = cop.description(g_currentState);
+                            break;
+                        }
+                    }
+                }
+                
+                opdesc = opdesc.trim();
+                var [costs, yields] = opdesc.split("=>");
+                if (costs) {
+                    var [what, units] = costs.split(": ");
+                    if (what === "integratedCircuits") what = "Integrated Circuits";
+                    opdesc = "Cost: " + units + what;
+
+                    operator.p.html(opdesc);
+                }
+            }
+        }
         operator.button.html(opcontent);
     }
     
@@ -650,13 +836,17 @@ function handleOperatorClicked(operator) {
         // AI Winter
         // on ML_1 && research 10000, AI Winter
 
-        updateInterface();
+        updateInterface(false);
     }
 }
 
 let backgroundIntervalSeconds = 0.1;
 function backgroundTick() {
     g_currentState = { ...g_currentState };
+    
+    if (g_currentState.gameOver)
+        return;
+    
     g_speedUp = g_debugSpeedUp;
     if (isResearched("R_SPEED_UP_GAME_TIME_1")) {
         g_speedUp *= 10;
@@ -670,7 +860,7 @@ function backgroundTick() {
     } else {
         var roboticsMultiplier = researchReward('R_INDUSTRIAL_ROBOTICS_', [2, 5, 10], 1);
         var mlPower = researchReward('R_ML_', [2, 3, 5, 8, 11], 1);
-        console.log('ml power', roboticsMultiplier, mlPower, roboticsMultiplier ** mlPower)
+        // console.log('ml power', roboticsMultiplier, mlPower, roboticsMultiplier ** mlPower)
 
         var percentComputerEffort = ~~(g_transistorsVsComputersSlider.val()) / 100;
         var percentTransistorEffort = 1 - percentComputerEffort;
@@ -679,7 +869,9 @@ function backgroundTick() {
 
         var welfareMultiplier = researchReward('R_WELFARE_', [0.5, 0.5 / 20, 0.5 / (20 * 5), 0.5 / (20 * 5 * 2)], 1);
         
-        const workUnitsTransformed = surveillanceMultiplier * welfareMultiplier * ((roboticsMultiplier) ** mlPower) * workUnitsBase;
+        var robotTaxFactoryMultiplier = g_currentState.robotTaxFactoryMultiplier || 1; //HACK to work with previous saves
+        
+        const workUnitsTransformed = surveillanceMultiplier * welfareMultiplier * ((roboticsMultiplier) ** mlPower) * workUnitsBase * robotTaxFactoryMultiplier;
 
         // Transistors
         var buildIcOps = workUnitsTransformed * percentTransistorEffort;
@@ -755,12 +947,12 @@ function backgroundTick() {
         }
     }
 
-    if (isResearched("R_ACCEPT_SURVEILLANCE") || isResearched("R_REJECT_SURVEILLANCE")) {
-        acceptSurveillance.button.remove();
-        rejectSurveillance.button.remove();
-    }
+    // if (isResearched("R_ACCEPT_SURVEILLANCE") || isResearched("R_REJECT_SURVEILLANCE")) {
+    //     acceptSurveillance.button.remove();
+    //     rejectSurveillance.button.remove();
+    // }
 
-    updateInterface();
+    updateInterface(true);
 
     setTimeout(backgroundTick, backgroundIntervalSeconds * 1000);
 }
@@ -768,7 +960,7 @@ function backgroundTick() {
 
 function main() {
     setupInterface();
-    updateInterface();
+    updateInterface(true);
     backgroundTick();
 }
 
