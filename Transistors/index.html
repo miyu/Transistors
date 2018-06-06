@@ -21,7 +21,18 @@
 </head>
 <body>
   <div>
-    <div id="status-host"></div>
+    <div id="status-host">
+
+      <table id="computeUnitSliderHost">
+        <tr><td colspan="2"><input id="computeUnitSlider" type="range" min="0" max="100" value="0" style="width:200px" /></td></tr>
+        <tr><td>Transistors</td><td align="right">Computers</td></tr>
+      </table>
+      <table id="reeducationSliderHost">
+        <tr><td colspan="2"><input id="reeducationSlider" type="range" min="0" max="100" value="0" style="width:200px" /></td></tr>
+        <tr><td>Research</td><td align="right">Reeducation</td></tr>
+      </table>
+
+    </div>
     <div id="debug-status-host" style="position: absolute; bottom: 0"></div>
     <div id="x" style="display: flex; flex-direction: row">
       <div id="control-host" style="flex: 1"></div>
@@ -106,14 +117,6 @@
     <p>The government shuts down the rest of your factories and research labs.</p>
   </div>
   <!-- Lorem ipsum dolor sit amet, ne unum dissentias mei. Facer nullam euismod ex pri, dicit deserunt argumentum eos id. Quis epicuri nam in, usu no scripta assueverit. Vel reque nullam in, esse habeo semper vim in, in vitae admodum vim. His decore accusata quaestio ei, no electram laboramus mei. Eos id vitae dolore alienum, ea illud cetero diceret quo, ne doctus meliore delicatissimi sed. Mel nobis soluta laboramus ad, et vel assum facilisis, usu dicam salutatus temporibus cu. -->
-  <table id="computeUnitSliderHost">
-    <tr><td colspan="2"><input id="computeUnitSlider" type="range" min="0" max="100" value="0" style="width:200px" /></td></tr>
-    <tr><td>Transistors</td><td align="right">Computers</td></tr>
-  </table>
-  <table id="reeducationSliderHost">
-    <tr><td colspan="2"><input id="reeducationSlider" type="range" min="0" max="100" value="0" style="width:200px" /></td></tr>
-    <tr><td>Research</td><td align="right">Reeducation</td></tr>
-  </table>
 
   <script src="main.js"></script>
 </body>

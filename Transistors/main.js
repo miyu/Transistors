@@ -575,14 +575,14 @@ function handleUnemployment75Pct(state) {
 }
 allOperators.push(unemployment75Pct);
 
-var unemploymentLose = new UnemploymentEventOperator("Lose", { }, 'E_LOSE', ['E_REEDUCATION_AVAILABLE'], handleUnemploymentLose, { }, 1);
-function handleUnemploymentLose(state) {
-    showNotification('E_LOSE');
-    state.factories = 0;
-    state.labs = 0;
-    state.gameOver = 1;
-}
-allOperators.push(unemploymentLose);
+// var unemploymentLose = new UnemploymentEventOperator("Lose", { }, 'E_LOSE', ['E_REEDUCATION_AVAILABLE'], handleUnemploymentLose, { }, 1);
+// function handleUnemploymentLose(state) {
+//     showNotification('E_LOSE');
+//     state.factories = 0;
+//     state.labs = 0;
+//     state.gameOver = 1;
+// }
+// allOperators.push(unemploymentLose);
 
 function dumpGraph() {
     const nodes = [];
